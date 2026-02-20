@@ -5,15 +5,14 @@
              xmlns:vm="using:SocialPublisher.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="vm:PublisherViewModel"
+             xmlns:views="using:SocialPublisher.Views"
              x:Class="SocialPublisher.Views.MainView">
-
-  <Design.DataContext>
-    <vm:PublisherViewModel />
-  </Design.DataContext>
-
-<!--    <Window.KeyBindings>
-    <KeyBinding Gesture="Ctrl+V" Command="{Binding PasteCommand}" />
-  </Window.KeyBindings>-->
+  <!--  <Design.DataContext>
+  <vm:PublisherViewModel/>
+  </Design.DataContext>-->
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+Shift+V" Command="{Binding PasteCommand}" />
+  </UserControl.KeyBindings>
 
   <Grid RowDefinitions="*, Auto" Margin="10">
     <ScrollViewer Grid.Row="0">
@@ -25,9 +24,8 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border Margin="5" CornerRadius="4" ClipToBounds="True">
-              <Image Source="{Binding DisplayImage}" Width="150" Height="150" Stretch="UniformToFill" />
-            </Border>
+            <views:ImageItemView />
+
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
@@ -37,6 +35,7 @@
       <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" Height="80" Margin="0, 0, 0, 10" />
       <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="Gray"/>
       <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+        <Button Command="{Binding AnalysisCommand}" Content="Analysis"/>
         <Button Command="{Binding PasteCommand}" Content="Paste"/>
         <Button Command="{Binding ClearCommand}" Content="Clear"/>
         <Button Command="{Binding SendCommand}" Content="Send" Classes="accent" Background="Green" Foreground="White" IsEnabled="{Binding !IsBusy}" />

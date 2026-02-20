@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:SocialPublisher.ViewModels"
+             xmlns:ic="using:FluentIcons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="180"
+             x:Class="SocialPublisher.Views.ImageItemView"
+             x:DataType="vm:PostImageViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.Overlay">
+      <Setter Property="Opacity">
+        <OnPlatform x:TypeArguments="x:Double" Default="0" Android="1" iOS="1"/>
+      </Setter>
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Grid:pointerover > Border.Overlay">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="5" Width="180" Height="180">
+    <Border CornerRadius="8" ClipToBounds="True" Background="#F0F0F0">
+      <Image Source="{Binding DisplayImage}" Width="180" Height="180" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+    </Border>
+    <Border Classes="Overlay" Background="#99000000" VerticalAlignment="Bottom" CornerRadius="0, 0, 8, 8" Height="40">
+      <Grid ColumnDefinitions="*,Auto,*">
+        <Button Grid.Column="0" Command="{Binding RotateCommand}" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <!--<TextBlock Text="R" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" />-->
+          <ic:SymbolIcon Symbol="ArrowClockwise" FontSize="18" Foreground="White" />
+        </Button>
+        <Rectangle Grid.Column="1" Width="1" Fill="#66FFFFFF" Margin="0, 3" />
+        <Button Grid.Column="2" Command="{Binding RemoveCommand}" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <!--<TextBlock Text="X" Foreground="#FF0000" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" />-->
+          <ic:SymbolIcon Symbol="Delete" FontSize="18" Foreground="White" />
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+
+</UserControl>

@@ -5,24 +5,20 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 
-using SocialPublisher.Models;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SocialPublisher.Services;
 
 public class AvaloniaClipboardService : IClipboardService {
-    public async Task<List<PostImage>> GetImagesFromClipboardAsync() {
-        List<PostImage> images = [];
+    public async Task<List<Byte[]>> GetImagesFromClipboardAsync() {
+        List<Byte[]> images = [];
         TopLevel? topLevel = GetTopLevel();
 
         if (topLevel?.Clipboard is not { } clipboard) {
-            //this.StatusMessage = "Clipboard not available.";
             return images;
         }
 
@@ -33,10 +29,9 @@ public class AvaloniaClipboardService : IClipboardService {
                     String path = file.Path.LocalPath;
                     if (IsImageFile(path)) {
                         var bytes = await File.ReadAllBytesAsync(path);
-                        images.Add(new PostImage(bytes));
+                        images.Add(bytes);
                     }
                 }
-                //this.StatusMessage = $"Pasted {this.Images.Count} image(s) from clipboard.";
                 return images;
             }
 
@@ -46,18 +41,18 @@ public class AvaloniaClipboardService : IClipboardService {
                 foreach (var item in data!.Items.Where(i => i.Formats.Any(f => f.Identifier is "PNG" or "Bitmap"))) {
                     var a = await item.TryGetRawAsync(DataFormat.Bitmap);
                     if (a is Bitmap bitmap) {
-                        images.Add(new PostImage(bitmap));
+                        using MemoryStream stream = new();
+                        bitmap.Save(stream);
+                        images.Add(stream.ToArray());
                     } else if (a is Byte[] bytes) {
-                        images.Add(new PostImage(bytes));
+                        images.Add(bytes);
                     }
                 }
-                //this.StatusMessage = $"Pasted {images.Count} image(s) from clipboard.";
                 return images;
             }
 
-            //this.StatusMessage = "No image data found in clipboard.";
-        } catch (Exception ex) {
-            //this.StatusMessage = $"Error pasting from clipboard: {ex.Message}";
+        } catch {
+            // ignore
         }
         return images;
     }
@@ -65,7 +60,7 @@ public class AvaloniaClipboardService : IClipboardService {
     private static TopLevel? GetTopLevel() {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             return TopLevel.GetTopLevel(desktop.MainWindow);
-        } else if (Application.Current?.ApplicationLifetime is  ISingleViewApplicationLifetime singleView) {
+        } else if (Application.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView) {
             return TopLevel.GetTopLevel(singleView.MainView);
         }
         return null;

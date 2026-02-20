@@ -4,8 +4,8 @@ using Avalonia.Markup.Xaml;
 
 namespace SocialPublisher.Views;
 
-public partial class MainView : UserControl {
-    public MainView() {
+public partial class ImageItemView : UserControl {
+    public ImageItemView() {
         this.InitializeComponent();
     }
 }
