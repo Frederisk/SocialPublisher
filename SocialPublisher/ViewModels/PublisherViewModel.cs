@@ -178,25 +178,36 @@ public partial class PublisherViewModel : ViewModelBase {
             _telegramClient ??= new TelegramBotClient(this.AppSettings.TelegramToken);
             //await _client.GetMe();
             String chatId = this.AppSettings.TelegramChatId;
-            var telegramChunks = this.Images.Chunk(10).ToList();
+            var telegramChunks = this.Images.Chunk(10);
+            using SemaphoreSlim throttler = new(2, 2);
             foreach (var chunk in telegramChunks) {
                 token.ThrowIfCancellationRequested();
 
                 List<InputMediaPhoto> album = [];
                 List<Stream> streamsToDispose = [];
-                Boolean isFirst = true;
-                foreach (var image in chunk) {
-                    Byte[] compressedImageBytes = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
-                    MemoryStream stream = new MemoryStream(compressedImageBytes);
-                    streamsToDispose.Add(stream);
-                    InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
-                    if (isFirst) {
-                        photo.Caption = this.Caption;
-                        isFirst = false;
-                    }
-                    album.Add(photo);
-                }
+                //Boolean isFirst = true;
                 try {
+                    var compressionTasks = chunk.Select(async (image) => {
+                        await throttler.WaitAsync(token);
+                        try {
+                            return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
+                        } finally {
+                            throttler.Release();
+                        }
+                    });
+
+                    Byte[][] compressedImages = await Task.WhenAll(compressionTasks);
+
+                    for (Int32 i = 0; i < chunk.Length; i++) {
+                        MemoryStream stream = new MemoryStream(compressedImages[i]);
+                        streamsToDispose.Add(stream);
+                        InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
+                        if (i is 0) {
+                            photo.Caption = this.Caption;
+                        }
+                        album.Add(photo);
+                    }
+
                     await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
                 } /* catch (Exception ex) {
                 this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
@@ -239,25 +250,38 @@ public partial class PublisherViewModel : ViewModelBase {
                 token.ThrowIfCancellationRequested();
 
                 var chunk = mastodonChunks[i];
-                //List<MemoryStream> streamsToDispose = [];
-                List<String> mediaIds = [];
-                //try {
-                foreach (var image in chunk) {
+                var uploadTasks = chunk.Select(async (image) => {
                     token.ThrowIfCancellationRequested();
 
-                    //var compressedImageBytes = image.ImageBytes; // await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
-                    //using MemoryStream stream = new(compressedImageBytes);
-                    //streamsToDispose.Add(stream);
-                    // stream.Position = 0;
                     using MemoryStream stream = new(image.ImageBytes);
-                    Attachment attachment = await _mastodonClient.UploadMedia(stream);
-                    mediaIds.Add(attachment.Id);
-                }
+                    return await _mastodonClient.UploadMedia(stream);
+                });
+
+                Attachment[] attachments = await Task.WhenAll(uploadTasks);
+                var mediaIds = attachments.Select(a => a.Id);
+                //List<MemoryStream> streamsToDispose = [];
+                //List<String> mediaIds = [];
+                ////try {
+                //foreach (var image in chunk) {
+                //    token.ThrowIfCancellationRequested();
+
+                //    //var compressedImageBytes = image.ImageBytes; // await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
+                //    //using MemoryStream stream = new(compressedImageBytes);
+                //    //streamsToDispose.Add(stream);
+                //    // stream.Position = 0;
+                //    using MemoryStream stream = new(image.ImageBytes);
+                //    Attachment attachment = await _mastodonClient.UploadMedia(stream);
+                //    mediaIds.Add(attachment.Id);
+                //}
                 String counterText = $"({i + 1}/{mastodonChunks.Count})";
                 //String statusText = (i is 0) ? this.Caption + " " + counterText : counterText;
-                String statusText = this.Caption + " " + counterText;
+                String statusText = $"{this.Caption} {counterText}"; //this.Caption + " " + counterText;
                 Visibility visibility = (i is 0) ? Visibility.Public : Visibility.Unlisted;
-                Status status = await _mastodonClient.PublishStatus(statusText, visibility: visibility, replyStatusId: replyStatusId, mediaIds: mediaIds);
+                Status status = await _mastodonClient.PublishStatus(
+                    statusText,
+                    visibility: visibility,
+                    replyStatusId: replyStatusId,
+                    mediaIds: mediaIds);
                 replyStatusId = status.Id;
                 //} finally {
                 //    foreach (var stream in streamsToDispose) {

@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SocialPublisher.Services;
 
@@ -56,12 +57,26 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         String illustId = IllustIdRegex().Match(url).Groups[1].Value;
         IllustDetail illust = await _pixivAppApi.GetIllustDetailAsync(illustId, cancellationToken);
         if (illust.Illust?.PageCount > 1) {
+            using SemaphoreSlim throttler = new(4, 4);
+            List<Task<Byte[]>> downloadTask = [];
+
             foreach (var page in illust.Illust.MetaPages) {
                 String? imageUrl = page.ImageUrls?.Original ?? page.ImageUrls?.Large ?? page.ImageUrls?.Medium ?? page.ImageUrls?.SquareMedium;
                 if (imageUrl is null) {
                     continue;
                 }
-                yield return await _pixivAppApi.DownloadImageAsync(imageUrl, cancellationToken);
+                downloadTask.Add(Task.Run(async () => {
+                    await throttler.WaitAsync(cancellationToken);
+                    try {
+                        return await _pixivAppApi.DownloadImageAsync(imageUrl, cancellationToken);
+                    } finally {
+                        throttler.Release();
+                    }
+                }, cancellationToken));
+                //yield return await _pixivAppApi.DownloadImageAsync(imageUrl, cancellationToken);
+            }
+            foreach (var task in downloadTask) {
+                yield return await task;
             }
         } else if (illust.Illust?.PageCount == 1) {
             String? imageUrl = illust.Illust.MetaSinglePage?.OriginalImageUrl;
@@ -95,6 +110,8 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                 // && media.TryGetProperty("all", out var allMedia)
                 && media.TryGetProperty("photos", out var allMedia)
                 ) {
+                //SemaphoreSlim throttler = new(4);
+                List<Task<Byte[]>> downloadTasks = [];
                 foreach (var item in allMedia.EnumerateArray()) {
                     if (item.TryGetProperty("url", out var urlElement)) {
                         String? imgUrl = urlElement.GetString();
@@ -108,8 +125,12 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                         //}
 
                         //results.Add(await _httpClient.GetByteArrayAsync(imgUrl));
-                        yield return await _httpClient.GetByteArrayAsync(imgUrl, cancellationToken);
+                        //yield return await _httpClient.GetByteArrayAsync(imgUrl, cancellationToken);
+                        downloadTasks.Add(_httpClient.GetByteArrayAsync(imgUrl, cancellationToken));
                     }
+                }
+                foreach (var task in downloadTasks) {
+                    yield return await task;
                 }
             }
         }
