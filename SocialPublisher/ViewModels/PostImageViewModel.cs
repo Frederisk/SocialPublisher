@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 using Avalonia.Media.Imaging;
 
@@ -19,26 +20,28 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     private Bitmap? _displayImage;
 
     private readonly Action<PostImageViewModel> _removeAction;
+    private readonly Action<PostImageViewModel> _openAction;
 
-    public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction) {
+    public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction, Action<PostImageViewModel> openAction) {
         this.ImageBytes = bytes;
         _removeAction = removeAction;
-        this.UpdateDisplayImage();
+        this.UpdateDisplayImageAsync();
+        this._openAction = openAction;
     }
 
-    //public PostImageViewModel(Bitmap bitmap, Action<PostImageViewModel> removeAction) {
-    //    this.DisplayImage = bitmap;
-    //    using MemoryStream stream = new();
-    //    bitmap.Save(stream);
-    //    this.ImageBytes = stream.ToArray();
-    //    _removeAction = removeAction;
-    //    //this.UpdateDisplayImage();
-    //}
+    [RelayCommand]
+    public void Open() {
+        _openAction?.Invoke(this);
+    }
 
     [RelayCommand]
-    public void Rotate() {
-        this.ImageBytes = ImageHelper.RotateImage(this.ImageBytes);
-        this.UpdateDisplayImage();
+    public async Task RotateAsync() {
+        if (_disposed) {
+            return;
+        }
+
+        this.ImageBytes = await ImageHelper.RotateImageAsync(this.ImageBytes);
+        this.UpdateDisplayImageAsync();
     }
 
     [RelayCommand]
@@ -46,20 +49,35 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
         _removeAction?.Invoke(this);
     }
 
-    private void UpdateDisplayImage() {
-        this.DisplayImage?.Dispose();
-        using MemoryStream stream = new(this.ImageBytes);
-        this.DisplayImage = new Bitmap(stream);
+    private void UpdateDisplayImageAsync() {
+        Task.Run(() => {
+            if (_disposed) return;
+
+            Bitmap newBitmap;
+            using (MemoryStream stream = new(this.ImageBytes)) {
+                newBitmap = Bitmap.DecodeToWidth(stream, 300);
+            }
+
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                if (_disposed) {
+                    newBitmap.Dispose();
+                    return;
+                }
+
+                var oldImage = this.DisplayImage;
+                this.DisplayImage = newBitmap;
+
+                oldImage?.Dispose();
+            });
+        });
     }
 
     protected virtual void Dispose(Boolean disposing) {
         if (_disposed) return;
 
         if (disposing) {
-            // Dispose managed resources
             this.DisplayImage?.Dispose();
         }
-        // No unmanaged resources to release
         _disposed = true;
     }
 

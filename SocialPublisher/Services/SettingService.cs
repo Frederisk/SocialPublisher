@@ -38,6 +38,7 @@ public class SettingService : ISettingService {
             try {
                 String json = File.ReadAllText(_settingsFilePath);
                 this.Settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                return;
             } catch {
                 // Ignore errors and use default settings
             }

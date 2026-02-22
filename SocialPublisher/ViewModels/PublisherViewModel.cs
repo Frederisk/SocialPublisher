@@ -1,18 +1,26 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Mastonet;
+using Mastonet.Entities;
+
 using SocialPublisher.Services;
+using SocialPublisher.Utils;
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace SocialPublisher.ViewModels;
 
@@ -24,8 +32,13 @@ public partial class PublisherViewModel : ViewModelBase {
     public AppSettings AppSettings => _settingService.Settings;
 
     [ObservableProperty]
-    private Boolean _isSettingsOpen = false;
+    private Boolean _isLightboxOpen = false;
 
+    [ObservableProperty]
+    private Bitmap? _lightboxImage;
+
+    [ObservableProperty]
+    private Boolean _isSettingsOpen = false;
 
     [ObservableProperty]
     private String _caption = String.Empty;
@@ -36,11 +49,17 @@ public partial class PublisherViewModel : ViewModelBase {
     [ObservableProperty]
     private Boolean _isBusy = false;
 
+    private TelegramBotClient? _telegramClient;
+
+    private MastodonClient? _mastodonClient;
+
     public TopLevel? TopLevelContext { get; set; }
 
     public ObservableCollection<PostImageViewModel> Images { get; } = [];
 
     private Progress<String> ProgressReporter => new(message => this.StatusMessage = message);
+
+    private CancellationTokenSource? _cancellationTokenSource;
 
     public PublisherViewModel(
         IClipboardService clipboardService,
@@ -69,7 +88,7 @@ public partial class PublisherViewModel : ViewModelBase {
         if (newImages.Count > 0) {
             foreach (var image in newImages) {
                 try {
-                    this.Images.Add(new PostImageViewModel(image, RemoveAction));
+                    this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
                 } catch {
                     // ignore: invalid image data
                 }
@@ -77,6 +96,40 @@ public partial class PublisherViewModel : ViewModelBase {
             this.StatusMessage = $"Pasted {newImages.Count} image(s).";
         } else {
             this.StatusMessage = "No images found in clipboard.";
+        }
+    }
+
+    [RelayCommand]
+    public void CloseLightbox() {
+        this.IsLightboxOpen = false;
+        var imgToDispose = this.LightboxImage;
+        this.LightboxImage = null;
+        imgToDispose?.Dispose();
+    }
+
+    [RelayCommand]
+    public async Task Analysis() {
+        String url = this.Caption.Trim();
+        if (String.IsNullOrEmpty(url)) {
+            return;
+        }
+        this.StatusMessage = "Analyzing images from URL...";
+        this.IsBusy = true;
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        try {
+            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.ProgressReporter, token)) {
+                this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
+            }
+            this.StatusMessage = $"Analysis completed.";
+        } catch (OperationCanceledException) {
+            this.StatusMessage = "Analysis cancelled.";
+        } catch {
+            this.StatusMessage = "Failed to load an image from URL.";
+        } finally {
+            this.IsBusy = false;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
         }
     }
 
@@ -89,24 +142,15 @@ public partial class PublisherViewModel : ViewModelBase {
         this.StatusMessage = $"Removed an image. {this.Images.Count} image(s) remaining.";
     }
 
-    [RelayCommand]
-    public async Task Analysis() {
-        String url = this.Caption.Trim();
-        if (String.IsNullOrEmpty(url)) {
-            return;
-        }
-        this.StatusMessage = "Analyzing images from URL...";
-        this.IsBusy = true;
+    private async void /* void for Action<PostImageViewModel> */ OpenLightbox(PostImageViewModel item) {
+        this.IsLightboxOpen = true;
 
-        try {
-            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.ProgressReporter)) {
-                this.Images.Add(new PostImageViewModel(image, RemoveAction));
-            }
-        } catch {
-            this.StatusMessage = "Failed to load an image from URL.";
-        }
-        this.StatusMessage = $"Analysis completed.";
-        this.IsBusy = false;
+        var oldImage = this.LightboxImage;
+        oldImage?.Dispose();
+        this.LightboxImage = await Task.Run(() => {
+            using MemoryStream stream = new(item.ImageBytes);
+            return new Bitmap(stream);
+        });
     }
 
     [RelayCommand]
@@ -127,12 +171,53 @@ public partial class PublisherViewModel : ViewModelBase {
 
         this.IsBusy = true;
         this.StatusMessage = "Sending...";
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        //TelegramBotClient client = new(this.AppSettings.TelegramToken);
+        try {
+            _telegramClient ??= new TelegramBotClient(this.AppSettings.TelegramToken);
+            //await _client.GetMe();
+            String chatId = this.AppSettings.TelegramChatId;
+            var telegramChunks = this.Images.Chunk(10).ToList();
+            foreach (var chunk in telegramChunks) {
+                token.ThrowIfCancellationRequested();
 
-        var telegramChunks = this.Images.Chunk(10).ToList();
-        
-
-        this.IsBusy = false;
-        this.StatusMessage = "Sent!";
+                List<InputMediaPhoto> album = [];
+                List<Stream> streamsToDispose = [];
+                Boolean isFirst = true;
+                foreach (var image in chunk) {
+                    Byte[] compressedImageBytes = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
+                    MemoryStream stream = new MemoryStream(compressedImageBytes);
+                    streamsToDispose.Add(stream);
+                    InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
+                    if (isFirst) {
+                        photo.Caption = this.Caption;
+                        isFirst = false;
+                    }
+                    album.Add(photo);
+                }
+                try {
+                    await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
+                } /* catch (Exception ex) {
+                this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
+                this.IsBusy = false;
+                return;
+                } */ finally {
+                    foreach (var stream in streamsToDispose) {
+                        stream.Dispose();
+                    }
+                }
+            }
+            this.StatusMessage = "Sent!";
+        } catch (OperationCanceledException) {
+            this.StatusMessage = "Sending cancelled.";
+        } catch (Exception ex) {
+            this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
+        } finally {
+            this.IsBusy = false;
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = null;
+        }
     }
 
     [RelayCommand]
@@ -143,11 +228,60 @@ public partial class PublisherViewModel : ViewModelBase {
 
         this.IsBusy = true;
         this.StatusMessage = "Sending...";
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        try {
+            _mastodonClient ??= new MastodonClient(this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken);
+            var mastodonChunks = this.Images.Chunk(4).ToList();
+            String? replyStatusId = null;
 
+            for (Int32 i = 0; i < mastodonChunks.Count; i++) {
+                token.ThrowIfCancellationRequested();
 
+                var chunk = mastodonChunks[i];
+                //List<MemoryStream> streamsToDispose = [];
+                List<String> mediaIds = [];
+                //try {
+                foreach (var image in chunk) {
+                    token.ThrowIfCancellationRequested();
 
-        this.IsBusy = false;
-        this.StatusMessage = "Sent!";
+                    //var compressedImageBytes = image.ImageBytes; // await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
+                    //using MemoryStream stream = new(compressedImageBytes);
+                    //streamsToDispose.Add(stream);
+                    // stream.Position = 0;
+                    using MemoryStream stream = new(image.ImageBytes);
+                    Attachment attachment = await _mastodonClient.UploadMedia(stream);
+                    mediaIds.Add(attachment.Id);
+                }
+                String counterText = $"({i + 1}/{mastodonChunks.Count})";
+                //String statusText = (i is 0) ? this.Caption + " " + counterText : counterText;
+                String statusText = this.Caption + " " + counterText;
+                Visibility visibility = (i is 0) ? Visibility.Public : Visibility.Unlisted;
+                Status status = await _mastodonClient.PublishStatus(statusText, visibility: visibility, replyStatusId: replyStatusId, mediaIds: mediaIds);
+                replyStatusId = status.Id;
+                //} finally {
+                //    foreach (var stream in streamsToDispose) {
+                //        stream.Dispose();
+                //    }
+                //}
+            }
+            this.StatusMessage = "Sent!";
+        } catch (OperationCanceledException) {
+            this.StatusMessage = "Cancelled.";
+        } catch (Exception ex) {
+            this.StatusMessage = "Failed to send to Mastodon: " + ex.Message;
+        } finally {
+            this.IsBusy = false;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+        }
     }
 
+    [RelayCommand]
+    public void CancelOperation() {
+        if (_cancellationTokenSource is not null && !_cancellationTokenSource.IsCancellationRequested) {
+            this.StatusMessage = "Cancelling...";
+            _cancellationTokenSource.Cancel();
+        }
+    }
 }

@@ -25,7 +25,15 @@
 
   <Grid Margin="5" Width="180" Height="180">
     <Border CornerRadius="8" ClipToBounds="True" Background="#F0F0F0">
-      <Image Source="{Binding DisplayImage}" Width="180" Height="180" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+      <Button Command="{Binding OpenCommand}" Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Button.Styles>
+          <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+          </Style>
+        </Button.Styles>
+        <!-- Width="180" Height="180" -->
+        <Image Source="{Binding DisplayImage}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+      </Button>
     </Border>
     <Border Classes="Overlay" Background="#99000000" VerticalAlignment="Bottom" CornerRadius="0, 0, 8, 8" Height="40">
       <Grid ColumnDefinitions="*,Auto,*">

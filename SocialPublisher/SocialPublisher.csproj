@@ -21,9 +21,11 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="FluentIcons.Avalonia" />
+    <PackageReference Include="Mastonet" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Natsukage.PixivCS" />
     <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Telegram.Bot" />
   </ItemGroup>
 
   <ItemGroup>

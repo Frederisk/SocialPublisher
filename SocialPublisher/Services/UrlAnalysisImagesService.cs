@@ -14,15 +14,13 @@ namespace SocialPublisher.Services;
 
 public interface IUrlAnalysisImagesService {
     //public Task<List<Byte[]>> AnalysisImagesAsync(String uri, String token);
-    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null);
+    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null, CancellationToken token = default);
 }
 
 public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
     private readonly HttpClient _httpClient;
     private readonly PixivAppApi _pixivAppApi;
     private readonly ISettingService _settingsService;
-
-    //private const String PixivRefreshToken = "";
 
     public UrlAnalysisImagesService(ISettingService settingsService) {
         _httpClient = new HttpClient();
@@ -31,11 +29,11 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         _settingsService = settingsService;
     }
 
-    public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null) {
-        await foreach (var image in AnalysisImagesAsync(url, progress, CancellationToken.None)) {
-            yield return image;
-        }
-    }
+    //public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null) {
+    //    await foreach (var image in AnalysisImagesAsync(url, progress, CancellationToken.None)) {
+    //        yield return image;
+    //    }
+    //}
 
     public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         if (url.Contains("pixiv.net", StringComparison.OrdinalIgnoreCase)) {
