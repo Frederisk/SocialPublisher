@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 
 namespace SocialPublisher.Services;
 
+public interface IClipboardService {
+    public Task<List<Byte[]>> GetImagesFromClipboardAsync();
+}
+
 public class AvaloniaClipboardService : IClipboardService {
     public async Task<List<Byte[]>> GetImagesFromClipboardAsync() {
         List<Byte[]> images = [];

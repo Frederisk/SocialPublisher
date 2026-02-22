@@ -23,6 +23,7 @@ public partial class App : Application {
 
     public override void OnFrameworkInitializationCompleted() {
         ServiceCollection collection = new();
+        collection.AddSingleton<ISettingService, SettingService>();
         collection.AddSingleton<IClipboardService, AvaloniaClipboardService>();
         collection.AddSingleton<IUrlAnalysisImagesService, UrlAnalysisImagesService>();
         collection.AddTransient<PublisherViewModel>();
