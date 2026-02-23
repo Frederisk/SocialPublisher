@@ -45,8 +45,10 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             await foreach (var image in AnalysisTwitterImagesAsync(url, progress, cancellationToken)) {
                 yield return image;
             }
+        } else {
+            progress?.Report("Unsupported URL.");
+            yield break;
         }
-        progress?.Report("Unsupported URL.");
     }
 
 
