@@ -16,6 +16,10 @@ public partial class AppSettings : ObservableObject {
     [ObservableProperty]
     private String _mastodonAccessToken = String.Empty;
     [ObservableProperty]
+    private String _alterMastodonInstanceUrl = String.Empty;
+    [ObservableProperty]
+    private String _alterMastodonAccessToken = String.Empty;
+    [ObservableProperty]
     private String _pixivRefreshToken = String.Empty;
 }
 

@@ -2,10 +2,13 @@
 using System.IO;
 using System.Threading.Tasks;
 
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
+using Microsoft.Extensions.DependencyInjection;
 
 using SocialPublisher.Utils;
 
@@ -22,11 +25,22 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     private readonly Action<PostImageViewModel> _removeAction;
     private readonly Action<PostImageViewModel> _openAction;
 
+    public PostImageViewModel() {
+        if (Design.IsDesignMode) {
+            this.ImageBytes = [];
+            _removeAction = _ => { };
+            _openAction = _ => { };
+        } else {
+            throw new InvalidOperationException("Use the constructor with parameters.");
+        }
+    }
+
+    [ActivatorUtilitiesConstructor]
     public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction, Action<PostImageViewModel> openAction) {
         this.ImageBytes = bytes;
         _removeAction = removeAction;
         this.UpdateDisplayImageAsync();
-        this._openAction = openAction;
+        _openAction = openAction;
     }
 
     [RelayCommand]

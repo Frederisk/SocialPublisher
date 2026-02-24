@@ -7,11 +7,12 @@ using CommunityToolkit.Mvvm.Input;
 using Mastonet;
 using Mastonet.Entities;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using SocialPublisher.Services;
 using SocialPublisher.Utils;
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -41,6 +42,12 @@ public partial class PublisherViewModel : ViewModelBase {
     private Boolean _isSettingsOpen = false;
 
     [ObservableProperty]
+    private Boolean _isAlter = false;
+
+    [ObservableProperty]
+    private Boolean _isLowQuality = false;
+
+    [ObservableProperty]
     private String _caption = String.Empty;
 
     [ObservableProperty]
@@ -61,6 +68,7 @@ public partial class PublisherViewModel : ViewModelBase {
 
     private CancellationTokenSource? _cancellationTokenSource;
 
+    [ActivatorUtilitiesConstructor]
     public PublisherViewModel(
         IClipboardService clipboardService,
         IUrlAnalysisImagesService urlAnalysisImagesService,
@@ -242,7 +250,8 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            _mastodonClient ??= new MastodonClient(this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken);
+            (String instanceUrl, String accessToken) = this.IsAlter ? (this.AppSettings.AlterMastodonInstanceUrl, this.AppSettings.AlterMastodonAccessToken) : (this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken);
+            _mastodonClient ??= new MastodonClient(instanceUrl, accessToken);
             var mastodonChunks = this.Images.Chunk(4).ToList();
             String? replyStatusId = null;
 

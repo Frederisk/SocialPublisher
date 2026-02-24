@@ -7,6 +7,9 @@
              mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="180"
              x:Class="SocialPublisher.Views.ImageItemView"
              x:DataType="vm:PostImageViewModel">
+  <Design.DataContext>
+    <vm:PostImageViewModel/>
+  </Design.DataContext>
   <UserControl.Styles>
     <Style Selector="Border.Overlay">
       <Setter Property="Opacity">
