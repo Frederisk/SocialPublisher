@@ -71,7 +71,7 @@ public class AvaloniaClipboardService : IClipboardService {
     }
 
     private static Boolean IsImageFile(String path) {
-        String extension = System.IO.Path.GetExtension(path).ToLowerInvariant();
-        return extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif";
+        String extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".webp" or ".jxl";
     }
 }

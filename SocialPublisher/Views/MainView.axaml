@@ -36,16 +36,21 @@
               <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" Watermark="123456:ABC-DEF..." />
               <TextBlock Text="Telegram Chat ID" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.TelegramChatId}" Watermark="-123456789" />
+
               <TextBlock Text="Mastodon Instance" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.MastodonInstanceUrl}" Watermark="https://mastodon.social" />
               <TextBlock Text="Mastodon Access Token" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.MastodonAccessToken}" PasswordChar="*" Watermark="Your Mastodon Access Token" />
+
               <TextBlock Text="Alter Mastodon Instance" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.AlterMastodonInstanceUrl}" PasswordChar="*" Watermark="https://mastodon.online" />
+              <TextBox Text="{Binding AppSettings.AlterMastodonInstanceUrl}" Watermark="https://mastodon.online" />
               <TextBlock Text="Alter Mastodon Access Token" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.AlterMastodonAccessToken}" PasswordChar="*" Watermark="Your Alter Mastodon Access Token" />
+
               <TextBlock Text="Pixiv Refresh Token" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.PixivRefreshToken}" PasswordChar="*" Watermark="Your Pixiv Refresh Token" />
+              <TextBlock Text="Images Storage Path" FontWeight="SemiBold" />
+              <TextBox Text="{Binding AppSettings.ImagesStoragePath}" Watermark="Your Pixiv Refresh Token" />
             </StackPanel>
           </ScrollViewer>
           <Button Grid.Row="2" Command="{Binding SaveSettingsCommand}" Content="Save" Classes="accent" Background="#1D9BF0" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0, 15, 0, 0" Height="40" />

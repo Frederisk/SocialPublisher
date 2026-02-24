@@ -37,6 +37,9 @@ public static class ImageHelper {
     }
 
     public static Byte[] ProcessAndCompressImage(Byte[] inputBytes, Int32 maxDimensionSum = 10000, Int64 maxFileSizeBytes = 2 * 1024 * 1024 /* 2MiB */, CancellationToken token = default) {
+        if (inputBytes.Length <= maxFileSizeBytes) {
+            return inputBytes;
+        }
         using SKBitmap? originalBitmap = SKBitmap.Decode(inputBytes);
         if (originalBitmap is null) {
             return inputBytes;
@@ -57,8 +60,13 @@ public static class ImageHelper {
                 originalBitmap.ScalePixels(bitmapToProcess, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
                 isResized = true;
             }
-            using SKImage image = SKImage.FromBitmap(bitmapToProcess);
-            SKData initialData = image.Encode(SKEncodedImageFormat.Jpeg, 100);
+            using SKPixmap pixmap = bitmapToProcess.PeekPixels();
+            SKWebpEncoderOptions options = new(SKWebpEncoderCompression.Lossless, 100);
+            SKData? initialData = pixmap.Encode(options);
+            if (initialData is null) {
+                using SKImage image = SKImage.FromBitmap(bitmapToProcess);
+                initialData = image.Encode(SKEncodedImageFormat.Webp, 100);
+            }
             if (initialData.Size <= maxFileSizeBytes) {
                 return initialData.ToArray();
             }
@@ -72,23 +80,21 @@ public static class ImageHelper {
             while (minQ <= maxQ) {
                 token.ThrowIfCancellationRequested();
 
-                //token.ThrowIfCancellationRequested();
-
                 Int32 midQ = minQ + (maxQ - minQ) / 2;
-                var data = image.Encode(SKEncodedImageFormat.Jpeg, midQ);
+                var data = pixmap.Encode(SKEncodedImageFormat.Webp, midQ);
 
-                if (data.Size <= maxFileSizeBytes) {
+                if (data?.Size <= maxFileSizeBytes) {
                     bestData?.Dispose();
                     bestData = data;
                     minQ = midQ + 1;
                 } else {
-                    data.Dispose();
+                    data?.Dispose();
                     maxQ = midQ - 1;
                 }
             }
             // If we couldn't find any quality that meets the requirement, use the lowest quality
-            bestData ??= image.Encode(SKEncodedImageFormat.Jpeg, 1);
-            return bestData.ToArray();
+            bestData ??= pixmap.Encode(SKEncodedImageFormat.Webp, 1);
+            return bestData?.ToArray() ?? inputBytes;
         } finally {
             // Dispose the resized bitmap if it was created
             if (isResized) {

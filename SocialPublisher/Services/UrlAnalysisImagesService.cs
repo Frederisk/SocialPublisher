@@ -1,8 +1,11 @@
 ﻿using PixivCS.Api;
 using PixivCS.Models.Illust;
 
+using SkiaSharp;
+
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -15,7 +18,7 @@ namespace SocialPublisher.Services;
 
 public interface IUrlAnalysisImagesService {
     //public Task<List<Byte[]>> AnalysisImagesAsync(String uri, String token);
-    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null, CancellationToken token = default);
+    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storagePath, IProgress<String>? progress = null, CancellationToken token = default);
 }
 
 public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
@@ -36,27 +39,74 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
     //    }
     //}
 
-    public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storagePath, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        String domain;
+        String id;
+        IAsyncEnumerable<Byte[]> images;
+
         if (url.Contains("pixiv.net", StringComparison.OrdinalIgnoreCase)) {
-            await foreach (var image in AnalysisPixivImagesAsync(url, progress, cancellationToken)) {
-                yield return image;
+            id = GetPixivIllustId(url);
+            if (String.IsNullOrEmpty(id)) {
+                yield break;
             }
+            domain = "pixiv.net";
+            images = AnalysisPixivImagesAsync(id, progress, cancellationToken);
+            //await foreach (var image in AnalysisPixivImagesAsync(illustId, progress, cancellationToken)) {
+            //    yield return image;
+            //}
         } else if (url.Contains("twitter.com", StringComparison.OrdinalIgnoreCase) || url.Contains("x.com", StringComparison.OrdinalIgnoreCase)) {
-            await foreach (var image in AnalysisTwitterImagesAsync(url, progress, cancellationToken)) {
-                yield return image;
+            id = GetTwitterTweetId(url);
+            if (String.IsNullOrEmpty(id)) {
+                yield break;
             }
+            domain = "twitter.com";
+            images = AnalysisTwitterImagesAsync(id, progress, cancellationToken);
+            //await foreach (var image in AnalysisTwitterImagesAsync(tweetId, progress, cancellationToken)) {
+            //    yield return image;
+            //}
         } else {
             progress?.Report("Unsupported URL.");
             yield break;
         }
+
+        String targetDirectory = String.Empty;
+        if (!String.IsNullOrWhiteSpace(storagePath)) {
+            targetDirectory = Path.Combine(storagePath, domain, id);
+            Directory.CreateDirectory(targetDirectory);
+        }
+
+        Int32 index = 0;
+        await foreach (var image in images.WithCancellation(cancellationToken)) {
+            if (image is null) {
+                continue;
+            }
+            if (!String.IsNullOrEmpty(targetDirectory)) {
+                using MemoryStream stream = new MemoryStream(image);
+                using SKCodec codec = SKCodec.Create(stream);
+                String extension = codec.EncodedFormat.ToString().ToLower();
+                String fileName = $"{index:00}.{extension}";
+                String filePath = Path.Combine(targetDirectory, fileName);
+                try {
+                    await File.WriteAllBytesAsync(filePath, image, cancellationToken);
+                } catch (Exception ex) {
+                    progress?.Report($"Save failed for {fileName}: {ex.Message}");
+                }
+            }
+
+            yield return image;
+            index++;
+        }
     }
 
+    private static String GetPixivIllustId(String url) => IllustIdRegex().Match(url).Groups[1].Value;
 
-    private async IAsyncEnumerable<Byte[]> AnalysisPixivImagesAsync(String url, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    private static String GetTwitterTweetId(String url) => TweetIdRegex().Match(url).Groups[1].Value;
+
+    private async IAsyncEnumerable<Byte[]> AnalysisPixivImagesAsync(String illustId, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         if (!_pixivAppApi.IsAuthenticated) {
             await _pixivAppApi.AuthAsync(_settingsService.Settings.PixivRefreshToken, cancellationToken);
         }
-        String illustId = IllustIdRegex().Match(url).Groups[1].Value;
+        //String illustId = IllustIdRegex().Match(url).Groups[1].Value;
         IllustDetail illust = await _pixivAppApi.GetIllustDetailAsync(illustId, cancellationToken);
         if (illust.Illust?.PageCount > 1) {
             using SemaphoreSlim throttler = new(4, 4);
@@ -92,13 +142,8 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         }
     }
 
-    private async IAsyncEnumerable<Byte[]> AnalysisTwitterImagesAsync(String url, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
-        var match = TweetIdRegex().Match(url);
-        if (!match.Success) {
-            yield break;
-        }
-
-        String tweetId = match.Groups[1].Value;
+    private async IAsyncEnumerable<Byte[]> AnalysisTwitterImagesAsync(String tweetId, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        //var tweetId = TweetIdRegex().Match(url).Groups[1].Value;
         String apiUrl = $"https://api.fxtwitter.com/status/{tweetId}";
 
         //try {

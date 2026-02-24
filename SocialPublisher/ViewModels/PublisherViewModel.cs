@@ -59,6 +59,7 @@ public partial class PublisherViewModel : ViewModelBase {
     private TelegramBotClient? _telegramClient;
 
     private MastodonClient? _mastodonClient;
+    private MastodonClient? _alterMastodonClient;
 
     public TopLevel? TopLevelContext { get; set; }
 
@@ -126,7 +127,7 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.ProgressReporter, token)) {
+            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.AppSettings.ImagesStoragePath, this.ProgressReporter, token)) {
                 this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
             }
             this.StatusMessage = $"Analysis completed.";
@@ -187,7 +188,7 @@ public partial class PublisherViewModel : ViewModelBase {
             //await _client.GetMe();
             String chatId = this.AppSettings.TelegramChatId;
             var telegramChunks = this.Images.Chunk(10);
-            using SemaphoreSlim throttler = new(2, 2);
+            using SemaphoreSlim throttler = new(4, 4);
             foreach (var chunk in telegramChunks) {
                 token.ThrowIfCancellationRequested();
 
@@ -250,8 +251,10 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            (String instanceUrl, String accessToken) = this.IsAlter ? (this.AppSettings.AlterMastodonInstanceUrl, this.AppSettings.AlterMastodonAccessToken) : (this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken);
-            _mastodonClient ??= new MastodonClient(instanceUrl, accessToken);
+            MastodonClient client = this.IsAlter switch {
+                true => _alterMastodonClient ??= new(this.AppSettings.AlterMastodonInstanceUrl, this.AppSettings.AlterMastodonAccessToken),
+                false => _mastodonClient ??= new(this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken)
+            };
             var mastodonChunks = this.Images.Chunk(4).ToList();
             String? replyStatusId = null;
 
@@ -261,42 +264,25 @@ public partial class PublisherViewModel : ViewModelBase {
                 var chunk = mastodonChunks[i];
                 var uploadTasks = chunk.Select(async (image) => {
                     token.ThrowIfCancellationRequested();
-
+                    Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /*unlimited*/, maxFileSizeBytes: 15 * 1024 * 1024 /* 15MiB */, token: token);
                     using MemoryStream stream = new(image.ImageBytes);
-                    return await _mastodonClient.UploadMedia(stream);
+                    return await client.UploadMedia(stream);
                 });
 
                 Attachment[] attachments = await Task.WhenAll(uploadTasks);
                 var mediaIds = attachments.Select(a => a.Id);
-                //List<MemoryStream> streamsToDispose = [];
-                //List<String> mediaIds = [];
-                ////try {
-                //foreach (var image in chunk) {
-                //    token.ThrowIfCancellationRequested();
 
-                //    //var compressedImageBytes = image.ImageBytes; // await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
-                //    //using MemoryStream stream = new(compressedImageBytes);
-                //    //streamsToDispose.Add(stream);
-                //    // stream.Position = 0;
-                //    using MemoryStream stream = new(image.ImageBytes);
-                //    Attachment attachment = await _mastodonClient.UploadMedia(stream);
-                //    mediaIds.Add(attachment.Id);
-                //}
                 String counterText = $"({i + 1}/{mastodonChunks.Count})";
                 //String statusText = (i is 0) ? this.Caption + " " + counterText : counterText;
                 String statusText = $"{this.Caption} {counterText}"; //this.Caption + " " + counterText;
                 Visibility visibility = (i is 0) ? Visibility.Public : Visibility.Unlisted;
-                Status status = await _mastodonClient.PublishStatus(
+                Status status = await client.PublishStatus(
                     statusText,
                     visibility: visibility,
                     replyStatusId: replyStatusId,
                     mediaIds: mediaIds);
                 replyStatusId = status.Id;
-                //} finally {
-                //    foreach (var stream in streamsToDispose) {
-                //        stream.Dispose();
-                //    }
-                //}
+
             }
             this.StatusMessage = "Sent!";
         } catch (OperationCanceledException) {

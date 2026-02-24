@@ -21,6 +21,8 @@ public partial class AppSettings : ObservableObject {
     private String _alterMastodonAccessToken = String.Empty;
     [ObservableProperty]
     private String _pixivRefreshToken = String.Empty;
+    [ObservableProperty]
+    private String _imagesStoragePath = String.Empty;
 }
 
 public interface ISettingService {
