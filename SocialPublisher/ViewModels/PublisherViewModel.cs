@@ -199,7 +199,7 @@ public partial class PublisherViewModel : ViewModelBase {
                     var compressionTasks = chunk.Select(async (image) => {
                         await throttler.WaitAsync(token);
                         try {
-                            return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, token: token);
+                            return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxMatrixLimit: Int64.MaxValue /* unlimited */, token: token);
                         } finally {
                             throttler.Release();
                         }
@@ -264,8 +264,8 @@ public partial class PublisherViewModel : ViewModelBase {
                 var chunk = mastodonChunks[i];
                 var uploadTasks = chunk.Select(async (image) => {
                     token.ThrowIfCancellationRequested();
-                    Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /*unlimited*/, maxFileSizeBytes: 15 * 1024 * 1024 /* 15MiB */, token: token);
-                    using MemoryStream stream = new(image.ImageBytes);
+                    Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /* unlimited */, maxFileSizeBytes: 16 * 1024 * 1024 /* 16MiB */, token: token);
+                    using MemoryStream stream = new(compressedImage);
                     return await client.UploadMedia(stream);
                 });
 
