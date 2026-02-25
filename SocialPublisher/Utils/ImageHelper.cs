@@ -1,7 +1,9 @@
 ﻿using SkiaSharp;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,92 +34,135 @@ public static class ImageHelper {
         return data.ToArray();
     }
 
-    public static async Task<Byte[]> ProcessAndCompressImageAsync(Byte[] inputBytes, Int32 maxDimensionSum = 10000, Int64 maxMatrixLimit = 7680 * 4320, Int64 maxFileSizeBytes = 2 * 1024 * 1024 /* 2MiB */, CancellationToken token = default) {
-        return await Task.Run(() => ProcessAndCompressImage(inputBytes, maxDimensionSum, maxMatrixLimit, maxFileSizeBytes, token), token);
-    }
-
-    public static Byte[] ProcessAndCompressImage(Byte[] inputBytes, Int32 maxDimensionSum = 10000, Int64 maxMatrixLimit = 7680 * 4320, Int64 maxFileSizeBytes = 2 * 1024 * 1024 /* 2MiB */, CancellationToken token = default) {
-
-        using SKBitmap? originalBitmap = SKBitmap.Decode(inputBytes);
-        if (originalBitmap is null) {
-            return inputBytes;
-        }
-
-        Int32 width = originalBitmap.Width;
-        Int32 height = originalBitmap.Height;
-        Int64 totalPixels = (Int64)width * height;
-
-        Double scale = 1.0;
-
-        if (width + height > maxDimensionSum) {
-            scale = Math.Min(scale, (Double)maxDimensionSum / (width + height));
-        }
-        if (totalPixels > maxMatrixLimit) {
-            scale = Math.Min(scale, Math.Sqrt((Double)maxMatrixLimit / totalPixels));
-        }
-
-        SKBitmap bitmapToProcess = originalBitmap;
-        Boolean isResized = false;
-        try {
-            if (scale < 1.0) {
-                token.ThrowIfCancellationRequested();
-
-                Int32 newWidth = Math.Max(1, (Int32)(width * scale));
-                Int32 newHeight = Math.Max(1, (Int32)(height * scale));
-                bitmapToProcess = new SKBitmap(newWidth, newHeight);
-                originalBitmap.ScalePixels(bitmapToProcess, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
-                isResized = true;
+    public static Task<Byte[]> ProcessAndCompressImageAsync(Byte[] inputBytes, Int32 maxDimensionSum = 10000, Int64 maxMatrixLimit = 7680 * 4320, Int64 maxFileSizeBytes = 2 * 1024 * 1024 /* 2MiB */, CancellationToken token = default) {
+        return Task.Run(async () => {
+            using SKBitmap? originalBitmap = SKBitmap.Decode(inputBytes);
+            if (originalBitmap is null) {
+                return inputBytes;
             }
 
-            //if (!isResized && inputBytes.Length <= maxFileSizeBytes) {
-            //    return inputBytes;
-            //}
+            Int32 width = originalBitmap.Width;
+            Int32 height = originalBitmap.Height;
+            Int64 totalPixels = (Int64)width * height;
 
-            using SKPixmap pixmap = bitmapToProcess.PeekPixels();
-            SKWebpEncoderOptions options = new(SKWebpEncoderCompression.Lossless, 100);
-            SKData? initialData = pixmap.Encode(options);
+            Double scale = 1.0;
 
-            if (initialData is null) {
-                using SKImage image = SKImage.FromBitmap(bitmapToProcess);
-                initialData = image.Encode(SKEncodedImageFormat.Webp, 100);
+            if (width + height > maxDimensionSum) {
+                scale = Math.Min(scale, (Double)maxDimensionSum / (width + height));
             }
-            if (initialData.Size <= maxFileSizeBytes) {
-                return initialData.ToArray();
+            if (totalPixels > maxMatrixLimit) {
+                scale = Math.Min(scale, Math.Sqrt((Double)maxMatrixLimit / totalPixels));
             }
-            initialData?.Dispose();
 
-            // Binary search for the best quality that meets the file size requirement
-            Int32 minQ = 1;
-            Int32 maxQ = 100;
-            Byte[]? bestBytes = null;
+            SKBitmap bitmapToProcess = originalBitmap;
+            Boolean isResized = false;
 
-            while (minQ <= maxQ) {
-                token.ThrowIfCancellationRequested();
+            SKData? bestData = null;
 
-                Int32 midQ = minQ + (maxQ - minQ) / 2;
-                using SKData? data = pixmap.Encode(SKEncodedImageFormat.Webp, midQ);
+            try {
+                if (scale < 1.0) {
+                    token.ThrowIfCancellationRequested();
 
-                if (data?.Size <= maxFileSizeBytes) {
-                    bestBytes = data.ToArray();
-                    minQ = midQ + 1;
-                } else {
-                    maxQ = midQ - 1;
+                    Int32 newWidth = Math.Max(1, (Int32)(width * scale));
+                    Int32 newHeight = Math.Max(1, (Int32)(height * scale));
+                    bitmapToProcess = new SKBitmap(newWidth, newHeight);
+                    originalBitmap.ScalePixels(bitmapToProcess, new SKSamplingOptions(SKCubicResampler.CatmullRom));
+                    isResized = true;
                 }
-            }
-            // If we couldn't find any quality that meets the requirement, use the lowest quality
-            //bestData ??= pixmap.Encode(SKEncodedImageFormat.Webp, 1);
-            //return bestData?.ToArray() ?? inputBytes;
-            if (bestBytes is null) {
-                using SKData? lowestData = pixmap.Encode(SKEncodedImageFormat.Webp, 1);
-                return lowestData?.ToArray() ?? inputBytes;
-            }
-            return bestBytes;
-        } finally {
-            // Dispose the resized bitmap if it was created
-            if (isResized) {
-                bitmapToProcess.Dispose();
-            }
-        }
-    }
 
+                using SKPixmap pixmap = bitmapToProcess.PeekPixels();
+                SKWebpEncoderOptions options = new(SKWebpEncoderCompression.Lossless, 100);
+                using (SKData? initialData = pixmap.Encode(options)) {
+                    if (initialData is not null && initialData.Size <= maxFileSizeBytes) {
+                        return initialData.ToArray();
+                    }
+                }
+
+                //if (!isResized && inputBytes.Length <= maxFileSizeBytes) {
+                //    return inputBytes;
+                //}
+
+                // Binary search for the best quality that meets the file size requirement
+                Int32 minQ = 1;
+                Int32 maxQ = 100;
+                //Byte[]? bestBytes = null;
+                const Int32 maxConcurrency = 4;
+
+                while (minQ <= maxQ) {
+                    token.ThrowIfCancellationRequested();
+
+                    //Int32 midQ = minQ + (maxQ - minQ) / 2;
+                    Int32 range = maxQ - minQ + 1;
+                    Int32 probeCount = Math.Min(range, maxConcurrency);
+                    List<Int32> probes = new(probeCount);
+
+                    if (probeCount is 1) {
+                        probes.Add(minQ + range / 2);
+                    } else {
+                        Double step = (Double)(range - 1) / (probeCount - 1);
+                        for (Int32 i = 0; i < probeCount; i++) {
+                            probes.Add(minQ + (Int32)Math.Round(i * step));
+                        }
+                    }
+                    probes = probes.Distinct().ToList();
+                    var encodeTask = probes.Select(q => Task.Run(() => {
+                        SKData? data = null;
+                        try {
+                            data = pixmap.Encode(SKEncodedImageFormat.Webp, q);
+                            return (Quality: q, Data: data);
+                        } catch {
+                            data?.Dispose();
+                            throw;
+                        }
+                    }, token));
+                    var results = await Task.WhenAll(encodeTask);
+
+                    Int32 highestPassingQ = minQ - 1;
+                    Int32 lowestFailingQ = maxQ + 1;
+                    SKData? bestLocalData = null;
+
+                    foreach (var (Quality, Data) in results.OrderBy(r => r.Quality)) {
+                        if (Data != null) {
+                            if (Data.Size <= maxFileSizeBytes) {
+                                highestPassingQ = Quality;
+                                bestLocalData = Data;
+                            } else {
+                                lowestFailingQ = Math.Min(lowestFailingQ, Quality);
+                            }
+                        }
+                    }
+
+                    if (bestLocalData is not null) {
+                        bestData?.Dispose();
+                        bestData = bestLocalData;
+                    }
+
+                    foreach (var (Quality, Data) in results) {
+                        if (Data is not null && !Object.ReferenceEquals(Data, bestData)) {
+                            Data.Dispose();
+                        }
+                    }
+
+                    minQ = highestPassingQ + 1;
+                    maxQ = lowestFailingQ - 1;
+                }
+
+                // If we couldn't find any quality that meets the requirement, use the lowest quality
+                //bestData ??= pixmap.Encode(SKEncodedImageFormat.Webp, 1);
+                //return bestData?.ToArray() ?? inputBytes;
+                if (bestData is null) {
+                    using SKData? lowestData = pixmap.Encode(SKEncodedImageFormat.Webp, 1);
+                    return lowestData?.ToArray() ?? inputBytes;
+                }
+                return bestData.ToArray();
+
+            } finally {
+                // Dispose the resized bitmap if it was created
+                if (isResized) {
+                    bitmapToProcess.Dispose();
+                }
+                bestData?.Dispose();
+            }
+        }, token);
+    }
 }
