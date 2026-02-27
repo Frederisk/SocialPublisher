@@ -87,13 +87,13 @@
           <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" Height="80" Margin="0, 0, 0, 5" />
           <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
           <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="5">
-            <Button Command="{Binding AnalysisCommand}" Content="Analysis" IsEnabled="{Binding !IsBusy}"/>
-            <Button Command="{Binding PasteCommand}" Content="Paste" IsEnabled="{Binding !IsBusy}"/>
-            <Button Command="{Binding ClearCommand}" Content="Clear" IsEnabled="{Binding !IsBusy}"/>
+            <Button Command="{Binding AnalysisCommand}" Content="_Analysis" IsEnabled="{Binding !IsBusy}"/>
+            <Button Command="{Binding PasteCommand}" Content="_Paste" IsEnabled="{Binding !IsBusy}"/>
+            <Button Command="{Binding ClearCommand}" Content="_Clear" IsEnabled="{Binding !IsBusy}"/>
             <!--<Button Command="{Binding SendCommand}" Content="Send" Classes="accent" Background="Green" Foreground="White" IsEnabled="{Binding !IsBusy}" />-->
-            <Button Command="{Binding SendTelegramCommand}" Content="Send to Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
-            <Button Command="{Binding SendMastodonCommand}" Content="Send to Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
-            <Button Command="{Binding CancelOperationCommand}" Content="Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
+            <Button Command="{Binding SendTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding SendMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding CancelOperationCommand}" Content="_Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
           </StackPanel>
           <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
         </Grid>
