@@ -79,14 +79,24 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto" Margin="0, 5, 0, 0">
+        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0, 5, 0, 0">
           <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5">
             <CheckBox Content="Alter" IsChecked="{Binding IsAlter}" />
             <CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" />
           </StackPanel>
-          <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" Height="80" Margin="0, 0, 0, 5" />
-          <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
-          <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="5">
+          <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="0, 0, 0, 5" />
+          <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
+          <WrapPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0">
+            <WrapPanel.Styles>
+              <Style Selector="Button">
+                <Setter Property="Margin" Value="2" />
+                <!--<Setter Property="MinHeight" Value="44" />-->
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <!--<Setter Property="FontSize" Value="16" />-->
+                <!--<Setter Property="Padding" Value="10, 5" />-->
+              </Style>
+            </WrapPanel.Styles>
             <Button Command="{Binding AnalysisCommand}" Content="_Analysis" IsEnabled="{Binding !IsBusy}"/>
             <Button Command="{Binding PasteCommand}" Content="_Paste" IsEnabled="{Binding !IsBusy}"/>
             <Button Command="{Binding ClearCommand}" Content="_Clear" IsEnabled="{Binding !IsBusy}"/>
@@ -94,8 +104,8 @@
             <Button Command="{Binding SendTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
             <Button Command="{Binding SendMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
             <Button Command="{Binding CancelOperationCommand}" Content="_Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
-          </StackPanel>
-          <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
+          </WrapPanel>
+          <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
         </Grid>
         <Border Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsLightboxOpen}" Background="#E6000000" Margin="-10">
           <Grid>

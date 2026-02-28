@@ -179,13 +179,12 @@ public partial class PublisherViewModel : ViewModelBase {
         }
 
         this.IsBusy = true;
-        this.StatusMessage = "Sending...";
+        this.StatusMessage = "Sending to Telegram...";
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         //TelegramBotClient client = new(this.AppSettings.TelegramToken);
         try {
             _telegramClient ??= new TelegramBotClient(this.AppSettings.TelegramToken);
-            //await _client.GetMe();
             String chatId = this.AppSettings.TelegramChatId;
             var telegramChunks = this.Images.Chunk(10);
             using SemaphoreSlim throttler = new(4, 4);
@@ -196,6 +195,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 List<Stream> streamsToDispose = [];
                 //Boolean isFirst = true;
                 try {
+                    //this.StatusMessage = $"Compressing {chunk.Length} image(s) for Telegram upload...";
                     var compressionTasks = chunk.Select(async (image) => {
                         await throttler.WaitAsync(token);
                         try {
@@ -216,7 +216,7 @@ public partial class PublisherViewModel : ViewModelBase {
                         }
                         album.Add(photo);
                     }
-
+                    //this.StatusMessage = $"Uploading {chunk.Length} image(s) to Telegram...";
                     await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
                 } /* catch (Exception ex) {
                 this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
@@ -228,7 +228,7 @@ public partial class PublisherViewModel : ViewModelBase {
                     }
                 }
             }
-            this.StatusMessage = "Sent!";
+            this.StatusMessage = "Sent to Telegram!";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Sending cancelled.";
         } catch (Exception ex) {
@@ -247,7 +247,7 @@ public partial class PublisherViewModel : ViewModelBase {
         }
 
         this.IsBusy = true;
-        this.StatusMessage = "Sending...";
+        this.StatusMessage = "Sending to Mastodon...";
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
@@ -264,8 +264,10 @@ public partial class PublisherViewModel : ViewModelBase {
                 var chunk = mastodonChunks[i];
                 var uploadTasks = chunk.Select(async (image) => {
                     token.ThrowIfCancellationRequested();
+                    //this.StatusMessage = $"Compressing image {Array.IndexOf(chunk, image) + 1}/{chunk.Length} for Mastodon upload...";
                     Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /* unlimited */, maxFileSizeBytes: 16 * 1024 * 1024 /* 16MiB */, token: token);
                     using MemoryStream stream = new(compressedImage);
+                    //this.StatusMessage = $"Uploading image {Array.IndexOf(chunk, image) + 1} of {chunk.Length} in chunk {i + 1} of {mastodonChunks.Count}...";
                     return await client.UploadMedia(stream);
                 });
 
@@ -284,7 +286,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 replyStatusId = status.Id;
 
             }
-            this.StatusMessage = "Sent!";
+            this.StatusMessage = "Sent to Mastodon!";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Cancelled.";
         } catch (Exception ex) {

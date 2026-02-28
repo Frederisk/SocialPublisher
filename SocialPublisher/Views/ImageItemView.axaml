@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:SocialPublisher.ViewModels"
              xmlns:ic="using:FluentIcons.Avalonia"
-             mc:Ignorable="d" d:DesignWidth="180" d:DesignHeight="180"
+             mc:Ignorable="d"
              x:Class="SocialPublisher.Views.ImageItemView"
              x:DataType="vm:PostImageViewModel">
   <Design.DataContext>
@@ -26,8 +26,8 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid Margin="5" Width="180" Height="180">
-    <Border CornerRadius="8" ClipToBounds="True" Background="#F0F0F0">
+  <Grid Margin="5" Width="160" Height="160">
+    <Border CornerRadius="8" ClipToBounds="True" Background="#A0A0A0">
       <Button Command="{Binding OpenCommand}" Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Button.Styles>
           <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
