@@ -79,14 +79,14 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0, 5, 0, 0">
+        <Grid Grid.Row="2" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0, 5, 0, 0">
           <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5">
             <CheckBox Content="Alter" IsChecked="{Binding IsAlter}" />
             <CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" />
           </StackPanel>
-          <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="0, 0, 0, 5" />
-          <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
-          <WrapPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0">
+          <TextBox Grid.Row="1" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="0, 0, 0, 5" />
+          <ProgressBar Grid.Row="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
+          <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
             <WrapPanel.Styles>
               <Style Selector="Button">
                 <Setter Property="Margin" Value="2" />
@@ -105,7 +105,7 @@
             <Button Command="{Binding SendMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
             <Button Command="{Binding CancelOperationCommand}" Content="_Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
           </WrapPanel>
-          <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
+          <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
         </Grid>
         <Border Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsLightboxOpen}" Background="#E6000000" Margin="-10">
           <Grid>
