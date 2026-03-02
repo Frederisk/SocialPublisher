@@ -77,7 +77,7 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         //String targetDirectory = String.Empty;
         IStorageFolder? targetFolder = null;
         TopLevel? topLevel = TopLevelHelper.GetTopLevel();
-        if (topLevel is not null) {
+        if (topLevel is not null && !String.IsNullOrEmpty(storageBookmark)) {
             var rootFolder = await topLevel.StorageProvider.OpenFolderBookmarkAsync(storageBookmark);
             if (rootFolder is not null) {
                 var domainFolder = await rootFolder.GetOrCreateFolderAsync(domain);

@@ -19,7 +19,10 @@ public class IOPickerService : IIOPickerService {
         if (topLevel is null) {
             return oldBookmark;
         }
-        using var oldFolder = await topLevel.StorageProvider.OpenFolderBookmarkAsync(oldBookmark);
+        if (!String.IsNullOrEmpty(oldBookmark)) {
+            return oldBookmark;
+        }
+        using var oldFolder = String.IsNullOrEmpty(oldBookmark) ? null : await topLevel.StorageProvider.OpenFolderBookmarkAsync(oldBookmark);
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
             Title = "Select a folder to save your posts",
             SuggestedStartLocation = oldFolder,
