@@ -29,7 +29,7 @@ public partial class AppSettings : ObservableObject {
     [ObservableProperty]
     //[NotifyPropertyChangedFor(nameof(ImageStoragePath))]
     private String _imagesStorageBookmark = String.Empty;
-    [JsonIgnore]
+    //[property: JsonIgnore] No longer ignore the ImagesStoragePath. We need this stored value so that when the program starts and `TopLevel` is not available, the UI can obtain a value to display.
     [ObservableProperty]
     private String _imagesStoragePath = String.Empty;
 

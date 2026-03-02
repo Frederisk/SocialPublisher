@@ -22,5 +22,6 @@
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />
     <PackageVersion Include="Telegram.Bot" Version="22.9.0" />
     <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+    <PackageVersion Include="Xaml.Behaviors.Interactivity" Version="11.3.9.5" />
   </ItemGroup>
 </Project>

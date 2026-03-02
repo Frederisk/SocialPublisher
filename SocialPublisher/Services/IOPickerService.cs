@@ -4,7 +4,6 @@ using Avalonia.Platform.Storage;
 using SocialPublisher.Utils;
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace SocialPublisher.Services;
@@ -19,16 +18,13 @@ public class IOPickerService : IIOPickerService {
         if (topLevel is null) {
             return oldBookmark;
         }
-        if (!String.IsNullOrEmpty(oldBookmark)) {
-            return oldBookmark;
-        }
         using var oldFolder = String.IsNullOrEmpty(oldBookmark) ? null : await topLevel.StorageProvider.OpenFolderBookmarkAsync(oldBookmark);
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions {
-            Title = "Select a folder to save your posts",
+            Title = "Select a folder to save your images",
             SuggestedStartLocation = oldFolder,
             AllowMultiple = false
         });
-        IStorageFolder? selected = folders.FirstOrDefault();
+        IStorageFolder? selected = folders.Count > 0 ? folders[0] : null;
         if (selected is null) {
             return oldBookmark;
         }

@@ -26,6 +26,7 @@
     <PackageReference Include="Natsukage.PixivCS" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Telegram.Bot" />
+    <PackageReference Include="Xaml.Behaviors.Interactivity" />
   </ItemGroup>
 
   <ItemGroup>

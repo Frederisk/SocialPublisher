@@ -2,6 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:i="using:Avalonia.Xaml.Interactivity"
+             xmlns:behaviors="using:SocialPublisher.Behaviors"
              xmlns:vm="using:SocialPublisher.ViewModels"
              xmlns:ic="using:FluentIcons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -17,6 +19,9 @@
   </UserControl.KeyBindings>
 
   <SplitView IsPaneOpen="{Binding IsSettingsOpen}" DisplayMode="Overlay" PanePlacement="Right" OpenPaneLength="320">
+    <i:Interaction.Behaviors>
+      <behaviors:KeyboardAdaptiveBehavior IsEnabled="True"/>
+    </i:Interaction.Behaviors>
     <SplitView.Pane>
       <Border Background="{DynamicResource SystemRegionBrush}" BorderBrush="Gray" BorderThickness="1, 0, 0, 0">
         <Grid RowDefinitions="Auto, *, Auto" Margin="15">
