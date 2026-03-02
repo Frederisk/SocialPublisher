@@ -26,6 +26,7 @@ public partial class App : Application {
         collection.AddSingleton<ISettingService, SettingService>();
         collection.AddSingleton<IClipboardService, AvaloniaClipboardService>();
         collection.AddSingleton<IUrlAnalysisImagesService, UrlAnalysisImagesService>();
+        collection.AddSingleton<IIOPickerService, IOPickerService>();
         collection.AddTransient<PublisherViewModel>();
         this.Services = collection.BuildServiceProvider();
 

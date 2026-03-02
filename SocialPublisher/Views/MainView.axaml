@@ -9,11 +9,7 @@
              xmlns:views="using:SocialPublisher.Views"
              x:Class="SocialPublisher.Views.MainView">
   <Design.DataContext>
-    <vm:PublisherViewModel>
-      <x:Arguments>
-        <x:Null /><x:Null /><x:Null />
-      </x:Arguments>
-    </vm:PublisherViewModel>
+    <vm:PublisherViewModel/>
   </Design.DataContext>
 
   <UserControl.KeyBindings>
@@ -33,24 +29,37 @@
           <ScrollViewer Grid.Row="1">
             <StackPanel Spacing="10">
               <TextBlock Text="Telegram Bot Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" Watermark="123456:ABC-DEF..." />
+              <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" Watermark="123456:ABC-DEF..." Classes="revealPasswordButton" />
               <TextBlock Text="Telegram Chat ID" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.TelegramChatId}" Watermark="-123456789" />
 
               <TextBlock Text="Mastodon Instance" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.MastodonInstanceUrl}" Watermark="https://mastodon.social" />
               <TextBlock Text="Mastodon Access Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.MastodonAccessToken}" PasswordChar="*" Watermark="Your Mastodon Access Token" />
+              <TextBox Text="{Binding AppSettings.MastodonAccessToken}" PasswordChar="*" Watermark="Your Mastodon Access Token" Classes="revealPasswordButton" />
 
               <TextBlock Text="Alter Mastodon Instance" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.AlterMastodonInstanceUrl}" Watermark="https://mastodon.online" />
               <TextBlock Text="Alter Mastodon Access Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.AlterMastodonAccessToken}" PasswordChar="*" Watermark="Your Alter Mastodon Access Token" />
+              <TextBox Text="{Binding AppSettings.AlterMastodonAccessToken}" PasswordChar="*" Watermark="Your Alter Mastodon Access Token" Classes="revealPasswordButton" />
 
               <TextBlock Text="Pixiv Refresh Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.PixivRefreshToken}" PasswordChar="*" Watermark="Your Pixiv Refresh Token" />
+              <TextBox Text="{Binding AppSettings.PixivRefreshToken}" PasswordChar="*" Watermark="Your Pixiv Refresh Token" Classes="revealPasswordButton" />
+
               <TextBlock Text="Images Storage Path" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.ImagesStoragePath}" Watermark="Your Pixiv Refresh Token" />
+              <Grid ColumnDefinitions="*, Auto, Auto">
+                <TextBox Grid.Column="0" Text="{Binding AppSettings.ImagesStoragePath}" IsReadOnly="True" Watermark="Your Images Stroage Path" />
+                <Button Grid.Column="1" Command="{Binding PickImagesStorageFolderCommand}">
+                  <Button.Content>
+                    <ic:SymbolIcon Symbol="Folder" FontSize="18" />
+                  </Button.Content>
+                </Button>
+                <Button Grid.Column="2" Command="{Binding ClearImagesStorageFolderCommand}" Background="#FF6347" Foreground="White">
+                  <Button.Content>
+                    <ic:SymbolIcon Symbol="Delete" FontSize="18" />
+                  </Button.Content>
+                </Button>
+              </Grid>
             </StackPanel>
           </ScrollViewer>
           <Button Grid.Row="2" Command="{Binding SaveSettingsCommand}" Content="Save" Classes="accent" Background="#1D9BF0" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0, 15, 0, 0" Height="40" />
@@ -86,7 +95,7 @@
           </StackPanel>
           <TextBox Grid.Row="1" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="0, 0, 0, 5" />
           <ProgressBar Grid.Row="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
-          <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+          <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0">
             <WrapPanel.Styles>
               <Style Selector="Button">
                 <Setter Property="Margin" Value="2" />

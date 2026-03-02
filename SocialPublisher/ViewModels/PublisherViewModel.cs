@@ -29,6 +29,7 @@ public partial class PublisherViewModel : ViewModelBase {
     private readonly ISettingService _settingService;
     private readonly IClipboardService _clipboardService;
     private readonly IUrlAnalysisImagesService _urlAnalysisImagesService;
+    private readonly IIOPickerService _iOPickerService;
 
     public AppSettings AppSettings => _settingService.Settings;
 
@@ -69,19 +70,37 @@ public partial class PublisherViewModel : ViewModelBase {
 
     private CancellationTokenSource? _cancellationTokenSource;
 
+#pragma warning disable CS8618
+    public PublisherViewModel() {
+        // Parameterless constructor for design-time data context
+    }
+#pragma warning restore CS8618
+
     [ActivatorUtilitiesConstructor]
     public PublisherViewModel(
         IClipboardService clipboardService,
         IUrlAnalysisImagesService urlAnalysisImagesService,
-        ISettingService settingService) {
+        ISettingService settingService,
+        IIOPickerService iOPickerService) {
         _clipboardService = clipboardService;
         _urlAnalysisImagesService = urlAnalysisImagesService;
         _settingService = settingService;
+        this._iOPickerService = iOPickerService;
     }
 
     [RelayCommand]
     public void ToggleSettings() {
         this.IsSettingsOpen = !this.IsSettingsOpen;
+    }
+
+    [RelayCommand]
+    public async Task PickImagesStorageFolder() {
+        this.AppSettings.ImagesStorageBookmark = await _iOPickerService.PickFolderAsync(this.AppSettings.ImagesStorageBookmark);
+    }
+
+    [RelayCommand]
+    public void ClearImagesStorageFolder() {
+        this.AppSettings.ImagesStorageBookmark = String.Empty;
     }
 
     [RelayCommand]
@@ -127,7 +146,7 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.AppSettings.ImagesStoragePath, this.ProgressReporter, token)) {
+            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
                 this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
             }
             this.StatusMessage = $"Analysis completed.";

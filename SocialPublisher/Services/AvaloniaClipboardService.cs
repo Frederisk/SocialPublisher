@@ -5,6 +5,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 
+using SocialPublisher.Utils;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +22,7 @@ public interface IClipboardService {
 public class AvaloniaClipboardService : IClipboardService {
     public async Task<List<Byte[]>> GetImagesFromClipboardAsync() {
         List<Byte[]> images = [];
-        TopLevel? topLevel = GetTopLevel();
+        TopLevel? topLevel = TopLevelHelper.GetTopLevel();
 
         if (topLevel?.Clipboard is not { } clipboard) {
             return images;
@@ -59,15 +61,6 @@ public class AvaloniaClipboardService : IClipboardService {
             // ignore
         }
         return images;
-    }
-
-    private static TopLevel? GetTopLevel() {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            return TopLevel.GetTopLevel(desktop.MainWindow);
-        } else if (Application.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView) {
-            return TopLevel.GetTopLevel(singleView.MainView);
-        }
-        return null;
     }
 
     private static Boolean IsImageFile(String path) {

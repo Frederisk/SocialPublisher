@@ -1,7 +1,12 @@
-﻿using PixivCS.Api;
+﻿using Avalonia.Controls;
+using Avalonia.Platform.Storage;
+
+using PixivCS.Api;
 using PixivCS.Models.Illust;
 
 using SkiaSharp;
+
+using SocialPublisher.Utils;
 
 using System;
 using System.Collections.Generic;
@@ -18,7 +23,7 @@ namespace SocialPublisher.Services;
 
 public interface IUrlAnalysisImagesService {
     //public Task<List<Byte[]>> AnalysisImagesAsync(String uri, String token);
-    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storagePath, IProgress<String>? progress = null, CancellationToken token = default);
+    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storageBookmark, IProgress<String>? progress = null, CancellationToken token = default);
 }
 
 public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
@@ -39,7 +44,7 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
     //    }
     //}
 
-    public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storagePath, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storageBookmark, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         String domain;
         String id;
         IAsyncEnumerable<Byte[]> images;
@@ -69,10 +74,17 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             yield break;
         }
 
-        String targetDirectory = String.Empty;
-        if (!String.IsNullOrWhiteSpace(storagePath)) {
-            targetDirectory = Path.Combine(storagePath, domain, id);
-            Directory.CreateDirectory(targetDirectory);
+        //String targetDirectory = String.Empty;
+        IStorageFolder? targetFolder = null;
+        TopLevel? topLevel = TopLevelHelper.GetTopLevel();
+        if (topLevel is not null) {
+            var rootFolder = await topLevel.StorageProvider.OpenFolderBookmarkAsync(storageBookmark);
+            if (rootFolder is not null) {
+                var domainFolder = await rootFolder.GetOrCreateFolderAsync(domain);
+                if (domainFolder is not null) {
+                    targetFolder = await domainFolder.GetOrCreateFolderAsync(id);
+                }
+            }
         }
 
         Int32 index = 0;
@@ -80,14 +92,21 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             if (image is null) {
                 continue;
             }
-            if (!String.IsNullOrEmpty(targetDirectory)) {
+            if (targetFolder is not null) {
                 using MemoryStream stream = new MemoryStream(image);
                 using SKCodec codec = SKCodec.Create(stream);
                 String extension = codec.EncodedFormat.ToString().ToLower();
                 String fileName = $"{index:00}.{extension}";
-                String filePath = Path.Combine(targetDirectory, fileName);
+                //String filePath = Path.Combine(targetDirectory, fileName);
                 try {
-                    await File.WriteAllBytesAsync(filePath, image, cancellationToken);
+                    var file = await targetFolder.GetOrCreateFileAsync(fileName);
+                    if (file is not null) {
+                        await using var outStream = await file.OpenWriteAsync();
+                        await outStream.WriteAsync(image, cancellationToken);
+                        await outStream.FlushAsync(cancellationToken);
+                    }
+
+                    //await File.WriteAllBytesAsync(filePath, image, cancellationToken);
                 } catch (Exception ex) {
                     progress?.Report($"Save failed for {fileName}: {ex.Message}");
                 }

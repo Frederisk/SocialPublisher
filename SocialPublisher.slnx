@@ -2,7 +2,9 @@
   <Folder Name="/Solution Items/">
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Project Path="SocialPublisher.Android/SocialPublisher.Android.csproj" />
+  <Project Path="SocialPublisher.Android/SocialPublisher.Android.csproj">
+    <Deploy />
+  </Project>
   <Project Path="SocialPublisher.Browser/SocialPublisher.Browser.csproj" />
   <Project Path="SocialPublisher.Desktop/SocialPublisher.Desktop.csproj" />
   <Project Path="SocialPublisher.iOS/SocialPublisher.iOS.csproj" />
