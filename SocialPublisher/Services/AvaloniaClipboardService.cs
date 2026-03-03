@@ -17,6 +17,8 @@ namespace SocialPublisher.Services;
 
 public interface IClipboardService {
     public Task<List<Byte[]>> GetImagesFromClipboardAsync();
+
+    public Task<String?> GetTextFromClipboardAsync();
 }
 
 public class AvaloniaClipboardService : IClipboardService {
@@ -66,5 +68,15 @@ public class AvaloniaClipboardService : IClipboardService {
     private static Boolean IsImageFile(String path) {
         String extension = Path.GetExtension(path).ToLowerInvariant();
         return extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".webp" or ".jxl";
+    }
+
+    public async Task<String?> GetTextFromClipboardAsync() {
+        var topLevel = TopLevelHelper.GetTopLevel();
+        if (topLevel?.Clipboard is not { } clipboard) {
+            return null;
+        }
+
+        var text = await clipboard.TryGetTextAsync();
+        return text;
     }
 }

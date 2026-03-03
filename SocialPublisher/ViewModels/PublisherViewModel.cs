@@ -123,7 +123,12 @@ public partial class PublisherViewModel : ViewModelBase {
             }
             this.StatusMessage = $"Pasted {newImages.Count} image(s).";
         } else {
-            this.StatusMessage = "No images found in clipboard.";
+            var text = await this._clipboardService.GetTextFromClipboardAsync();
+            if (!String.IsNullOrEmpty(text)) {
+                this.Caption = text;
+            } else {
+                this.StatusMessage = "No images or text found in clipboard.";
+            }
         }
     }
 
