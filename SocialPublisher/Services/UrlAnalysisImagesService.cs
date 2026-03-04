@@ -73,8 +73,6 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             progress?.Report("Unsupported URL.");
             yield break;
         }
-        // FIXME: On Android, subfolders cannot be created correctly, this is an upstream bug of Avalonia.
-        // See: https://github.com/AvaloniaUI/Avalonia/issues/20578
         //String targetDirectory = String.Empty;
         IStorageFolder? targetFolder = null;
         TopLevel? topLevel = TopLevelHelper.GetTopLevel();
@@ -103,6 +101,8 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                     var file = await targetFolder.GetOrCreateFileAsync(fileName);
                     if (file is not null) {
                         await using var outStream = await file.OpenWriteAsync();
+                        // Android doesn't support truncating files, so we don't set the length of the stream to 0 before writing.
+                        // outStream.SetLength(0);
                         await outStream.WriteAsync(image, cancellationToken);
                         await outStream.FlushAsync(cancellationToken);
                     }

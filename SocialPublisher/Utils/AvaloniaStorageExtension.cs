@@ -18,7 +18,8 @@ public static class AvaloniaStorageExtension {
                 return folder;
             }
         }
-
+        // FIXME: On Android, subfolders cannot be created correctly, this is an upstream bug of Avalonia.
+        // See: https://github.com/AvaloniaUI/Avalonia/issues/20578
 #if ANDROID
         try {
             var context = Application.Context;
@@ -58,7 +59,14 @@ public static class AvaloniaStorageExtension {
     public static async Task<IStorageFile?> GetOrCreateFileAsync(this IStorageFolder parentFolder, String fileName) {
         await foreach (var item in parentFolder.GetItemsAsync()) {
             if (item is IStorageFile file && file.Name == fileName) {
-                return file;
+                // In Android, when attempting to overwrite an existing file,
+                // the file is not truncated beforehand,
+                // and you also cannot truncate it by setting the length to 0,
+                // which will result in file data remnants.
+                // So we need to delete the file and create a new one to achieve the overwrite effect.
+                // return file;
+                await file.DeleteAsync();
+                break;
             }
         }
 
