@@ -13,10 +13,9 @@ namespace SocialPublisher.Utils;
 
 public static class AvaloniaStorageExtension {
     public static async Task<IStorageFolder?> GetOrCreateFolderAsync(this IStorageFolder parentFolder, String folderName) {
-        await foreach (var item in parentFolder.GetItemsAsync()) {
-            if (item is IStorageFolder folder && folder.Name == folderName) {
-                return folder;
-            }
+        var folder = await parentFolder.GetFolderAsync(folderName);
+        if (folder is not null) {
+            return folder;
         }
         // FIXME: On Android, subfolders cannot be created correctly, this is an upstream bug of Avalonia.
         // See: https://github.com/AvaloniaUI/Avalonia/issues/20578
@@ -57,17 +56,15 @@ public static class AvaloniaStorageExtension {
     }
 
     public static async Task<IStorageFile?> GetOrCreateFileAsync(this IStorageFolder parentFolder, String fileName) {
-        await foreach (var item in parentFolder.GetItemsAsync()) {
-            if (item is IStorageFile file && file.Name == fileName) {
-                // In Android, when attempting to overwrite an existing file,
-                // the file is not truncated beforehand,
-                // and you also cannot truncate it by setting the length to 0,
-                // which will result in file data remnants.
-                // So we need to delete the file and create a new one to achieve the overwrite effect.
-                // return file;
-                await file.DeleteAsync();
-                break;
-            }
+        var file = await parentFolder.GetFileAsync(fileName);
+        if (file is not null) {
+            // In Android, when attempting to overwrite an existing file,
+            // the file is not truncated beforehand,
+            // and you also cannot truncate it by setting the length to 0,
+            // which will result in file data remnants.
+            // So we need to delete the file and create a new one to achieve the overwrite effect.
+            // return file;
+            await file.DeleteAsync();
         }
 
 #if ANDROID
