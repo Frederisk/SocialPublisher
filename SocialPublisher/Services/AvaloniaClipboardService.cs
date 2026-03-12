@@ -16,53 +16,47 @@ using System.Threading.Tasks;
 namespace SocialPublisher.Services;
 
 public interface IClipboardService {
-    public Task<List<Byte[]>> GetImagesFromClipboardAsync();
+    public IAsyncEnumerable<Byte[]> GetImagesFromClipboardAsync();
 
     public Task<String?> GetTextFromClipboardAsync();
 }
 
 public class AvaloniaClipboardService : IClipboardService {
-    public async Task<List<Byte[]>> GetImagesFromClipboardAsync() {
-        List<Byte[]> images = [];
+    public async IAsyncEnumerable<Byte[]> GetImagesFromClipboardAsync() {
         TopLevel? topLevel = TopLevelHelper.GetTopLevel();
 
         if (topLevel?.Clipboard is not { } clipboard) {
-            return images;
+            //return images;
+            yield break;
         }
 
-        try {
-            var files = await clipboard.TryGetFilesAsync();
-            if (files is not null && files.Length > 0) {
-                foreach (var file in files) {
-                    String path = file.Path.LocalPath;
-                    if (IsImageFile(path)) {
-                        var bytes = await File.ReadAllBytesAsync(path);
-                        images.Add(bytes);
-                    }
+        var files = await clipboard.TryGetFilesAsync();
+        if (files is not null && files.Length > 0) {
+            foreach (var file in files) {
+                String path = file.Path.LocalPath;
+                if (IsImageFile(path)) {
+                    yield return await File.ReadAllBytesAsync(path);
                 }
-                return images;
             }
-
-            var format = await clipboard.GetDataFormatsAsync();
-            if (format.Any(t => t.Identifier is "PNG" or "Bitmap")) {
-                var data = await clipboard.TryGetDataAsync();
-                foreach (var item in data!.Items.Where(i => i.Formats.Any(f => f.Identifier is "PNG" or "Bitmap"))) {
-                    var a = await item.TryGetRawAsync(DataFormat.Bitmap);
-                    if (a is Bitmap bitmap) {
-                        using MemoryStream stream = new();
-                        bitmap.Save(stream);
-                        images.Add(stream.ToArray());
-                    } else if (a is Byte[] bytes) {
-                        images.Add(bytes);
-                    }
-                }
-                return images;
-            }
-
-        } catch {
-            // ignore
+            yield break;
         }
-        return images;
+
+        var format = await clipboard.GetDataFormatsAsync();
+        if (format.Any(t => t.Identifier is "PNG" or "Bitmap")) {
+            var data = await clipboard.TryGetDataAsync();
+            foreach (var item in data!.Items.Where(i => i.Formats.Any(f => f.Identifier is "PNG" or "Bitmap"))) {
+                var a = await item.TryGetRawAsync(DataFormat.Bitmap);
+                if (a is Bitmap bitmap) {
+                    using MemoryStream stream = new();
+                    bitmap.Save(stream);
+                    yield return stream.ToArray();
+                } else if (a is Byte[] bytes) {
+                    yield return bytes;
+                }
+            }
+            yield break;
+        }
+        yield break;
     }
 
     private static Boolean IsImageFile(String path) {
