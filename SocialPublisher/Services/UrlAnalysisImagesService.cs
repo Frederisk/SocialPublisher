@@ -38,12 +38,6 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         _settingsService = settingsService;
     }
 
-    //public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, IProgress<String>? progress = null) {
-    //    await foreach (var image in AnalysisImagesAsync(url, progress, CancellationToken.None)) {
-    //        yield return image;
-    //    }
-    //}
-
     public async IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storageBookmark, IProgress<String>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         String domain;
         String id;
@@ -56,9 +50,6 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             }
             domain = "pixiv.net";
             images = AnalysisPixivImagesAsync(id, progress, cancellationToken);
-            //await foreach (var image in AnalysisPixivImagesAsync(illustId, progress, cancellationToken)) {
-            //    yield return image;
-            //}
         } else if (url.Contains("twitter.com", StringComparison.OrdinalIgnoreCase) || url.Contains("x.com", StringComparison.OrdinalIgnoreCase)) {
             id = GetTwitterTweetId(url);
             if (String.IsNullOrEmpty(id)) {
@@ -66,14 +57,9 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
             }
             domain = "twitter.com";
             images = AnalysisTwitterImagesAsync(id, progress, cancellationToken);
-            //await foreach (var image in AnalysisTwitterImagesAsync(tweetId, progress, cancellationToken)) {
-            //    yield return image;
-            //}
         } else {
-            progress?.Report("Unsupported URL.");
-            yield break;
+            throw new InvalidOperationException("Unsupported URL.");
         }
-        //String targetDirectory = String.Empty;
         IStorageFolder? targetFolder = null;
         TopLevel? topLevel = TopLevelHelper.GetTopLevel();
         if (topLevel is not null && !String.IsNullOrEmpty(storageBookmark)) {
@@ -106,10 +92,8 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                         await outStream.WriteAsync(image, cancellationToken);
                         await outStream.FlushAsync(cancellationToken);
                     }
-
-                    //await File.WriteAllBytesAsync(filePath, image, cancellationToken);
                 } catch (Exception ex) {
-                    progress?.Report($"Save failed for {fileName}: {ex.Message}");
+                    throw new IOException($"Save failed for {fileName}: {ex.Message}");
                 }
             }
 
@@ -145,7 +129,6 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                         throttler.Release();
                     }
                 }, cancellationToken));
-                //yield return await _pixivAppApi.DownloadImageAsync(imageUrl, cancellationToken);
             }
             foreach (var task in downloadTask) {
                 yield return await task;

@@ -52,6 +52,9 @@ public partial class PublisherViewModel : ViewModelBase {
     private String _caption = String.Empty;
 
     [ObservableProperty]
+    private String _batchUri = String.Empty;
+
+    [ObservableProperty]
     private String _statusMessage = "Ready to Paste.";
 
     [ObservableProperty]
@@ -112,16 +115,13 @@ public partial class PublisherViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task Paste() {
-        var newImages = await this._clipboardService.GetImagesFromClipboardAsync();
-        if (newImages.Count > 0) {
-            foreach (var image in newImages) {
-                try {
-                    this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
-                } catch {
-                    // ignore: invalid image data
-                }
-            }
-            this.StatusMessage = $"Pasted {newImages.Count} image(s).";
+        UInt32 insertImageCount = 0;
+        await foreach (var image in this._clipboardService.GetImagesFromClipboardAsync()) {
+            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
+            insertImageCount++;
+        }
+        if (insertImageCount is not 0) {
+            this.StatusMessage = $"Pasted {insertImageCount} image(s).";
         } else {
             var text = await this._clipboardService.GetTextFromClipboardAsync();
             if (!String.IsNullOrEmpty(text)) {
@@ -142,8 +142,13 @@ public partial class PublisherViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task Analysis() {
-        String url = this.Caption.Trim();
-        if (String.IsNullOrEmpty(url)) {
+        if (this.AppSettings.EnableBatchMode) {
+            await this.StartBatchAsync(SocialPlatform.None);
+            return;
+        }
+
+        String uri = this.Caption.Trim();
+        if (String.IsNullOrEmpty(uri)) {
             return;
         }
         this.StatusMessage = "Analyzing images from URL...";
@@ -151,18 +156,22 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(this.Caption, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
-                this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
-            }
+            await this.AnalysisUriToImagesAsync(uri, token);
             this.StatusMessage = $"Analysis completed.";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Analysis cancelled.";
-        } catch {
-            this.StatusMessage = "Failed to load an image from URL.";
+        } catch (Exception ex) {
+            this.StatusMessage = "Failed to load an image from URL: " + ex.Message;
         } finally {
             this.IsBusy = false;
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
+        }
+    }
+
+    private async Task AnalysisUriToImagesAsync(String uri, CancellationToken token) {
+        await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
+            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
         }
     }
 
@@ -193,70 +202,41 @@ public partial class PublisherViewModel : ViewModelBase {
         }
         this.Images.Clear();
         this.Caption = String.Empty;
+        //this.BatchUri = String.Empty;
         this.StatusMessage = "Cleared.";
     }
 
     [RelayCommand]
-    public async Task SendTelegram() {
-        if (this.Images.Count is 0) {
+    public async Task SendToTelegram() => await this.SendToSocialAsync(SocialPlatform.Telegram);
+
+    [RelayCommand]
+    public async Task SendToMastodon() => await this.SendToSocialAsync(SocialPlatform.Mastodon);
+
+    public async Task SendToSocialAsync(SocialPlatform platform) {
+        if (this.AppSettings.EnableBatchMode) {
+            await this.StartBatchAsync(platform);
             return;
         }
 
+        if (this.Images.Count is 0) {
+            return;
+        }
         this.IsBusy = true;
-        this.StatusMessage = "Sending to Telegram...";
+        this.StatusMessage = $"Sending to {platform.ToString()}...";
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
-        //TelegramBotClient client = new(this.AppSettings.TelegramToken);
         try {
-            _telegramClient ??= new TelegramBotClient(this.AppSettings.TelegramToken);
-            String chatId = this.AppSettings.TelegramChatId;
-            var telegramChunks = this.Images.Chunk(10);
-            using SemaphoreSlim throttler = new(4, 4);
-            foreach (var chunk in telegramChunks) {
-                token.ThrowIfCancellationRequested();
-
-                List<InputMediaPhoto> album = [];
-                List<Stream> streamsToDispose = [];
-                //Boolean isFirst = true;
-                try {
-                    //this.StatusMessage = $"Compressing {chunk.Length} image(s) for Telegram upload...";
-                    var compressionTasks = chunk.Select(async (image) => {
-                        await throttler.WaitAsync(token);
-                        try {
-                            return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxMatrixLimit: Int64.MaxValue /* unlimited */, token: token);
-                        } finally {
-                            throttler.Release();
-                        }
-                    });
-
-                    Byte[][] compressedImages = await Task.WhenAll(compressionTasks);
-
-                    for (Int32 i = 0; i < chunk.Length; i++) {
-                        MemoryStream stream = new MemoryStream(compressedImages[i]);
-                        streamsToDispose.Add(stream);
-                        InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
-                        if (i is 0) {
-                            photo.Caption = this.Caption;
-                        }
-                        album.Add(photo);
-                    }
-                    //this.StatusMessage = $"Uploading {chunk.Length} image(s) to Telegram...";
-                    await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
-                } /* catch (Exception ex) {
-                this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
-                this.IsBusy = false;
-                return;
-                } */ finally {
-                    foreach (var stream in streamsToDispose) {
-                        stream.Dispose();
-                    }
-                }
+            if (platform.HasFlag(SocialPlatform.Mastodon)) {
+                await this.SendImagesToMastodonAsync(token);
             }
-            this.StatusMessage = "Sent to Telegram!";
+            if (platform.HasFlag(SocialPlatform.Telegram)) {
+                await this.SendImagesToTelegramAsync(token);
+            }
+            this.StatusMessage = $"Sent to {platform.ToString()}!";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Sending cancelled.";
         } catch (Exception ex) {
-            this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
+            this.StatusMessage = $"Failed to send images to {platform.ToString()}: " + ex.Message;
         } finally {
             this.IsBusy = false;
             _cancellationTokenSource.Dispose();
@@ -264,61 +244,87 @@ public partial class PublisherViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
-    public async Task SendMastodon() {
-        if (this.Images.Count is 0) {
-            return;
-        }
+    private async Task SendImagesToMastodonAsync(CancellationToken token) {
+        MastodonClient client = this.IsAlter switch {
+            true => _alterMastodonClient ??= new(this.AppSettings.AlterMastodonInstanceUrl, this.AppSettings.AlterMastodonAccessToken),
+            false => _mastodonClient ??= new(this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken)
+        };
+        var mastodonChunks = this.Images.Chunk(4).ToList();
+        String? replyStatusId = null;
 
-        this.IsBusy = true;
-        this.StatusMessage = "Sending to Mastodon...";
-        _cancellationTokenSource = new CancellationTokenSource();
-        var token = _cancellationTokenSource.Token;
-        try {
-            MastodonClient client = this.IsAlter switch {
-                true => _alterMastodonClient ??= new(this.AppSettings.AlterMastodonInstanceUrl, this.AppSettings.AlterMastodonAccessToken),
-                false => _mastodonClient ??= new(this.AppSettings.MastodonInstanceUrl, this.AppSettings.MastodonAccessToken)
-            };
-            var mastodonChunks = this.Images.Chunk(4).ToList();
-            String? replyStatusId = null;
+        for (Int32 i = 0; i < mastodonChunks.Count; i++) {
+            token.ThrowIfCancellationRequested();
 
-            for (Int32 i = 0; i < mastodonChunks.Count; i++) {
+            var chunk = mastodonChunks[i];
+            var uploadTasks = chunk.Select(async (image) => {
                 token.ThrowIfCancellationRequested();
+                //this.StatusMessage = $"Compressing image {Array.IndexOf(chunk, image) + 1}/{chunk.Length} for Mastodon upload...";
+                Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /* unlimited */, maxFileSizeBytes: 16 * 1024 * 1024 /* 16MiB */, token: token);
+                using MemoryStream stream = new(compressedImage);
+                //this.StatusMessage = $"Uploading image {Array.IndexOf(chunk, image) + 1} of {chunk.Length} in chunk {i + 1} of {mastodonChunks.Count}...";
+                return await client.UploadMedia(stream);
+            });
 
-                var chunk = mastodonChunks[i];
-                var uploadTasks = chunk.Select(async (image) => {
-                    token.ThrowIfCancellationRequested();
-                    //this.StatusMessage = $"Compressing image {Array.IndexOf(chunk, image) + 1}/{chunk.Length} for Mastodon upload...";
-                    Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /* unlimited */, maxFileSizeBytes: 16 * 1024 * 1024 /* 16MiB */, token: token);
-                    using MemoryStream stream = new(compressedImage);
-                    //this.StatusMessage = $"Uploading image {Array.IndexOf(chunk, image) + 1} of {chunk.Length} in chunk {i + 1} of {mastodonChunks.Count}...";
-                    return await client.UploadMedia(stream);
+            Attachment[] attachments = await Task.WhenAll(uploadTasks);
+            var mediaIds = attachments.Select(a => a.Id);
+
+            String counterText = $"({i + 1}/{mastodonChunks.Count})";
+            //String statusText = (i is 0) ? this.Caption + " " + counterText : counterText;
+            String statusText = $"{this.Caption} {counterText}"; //this.Caption + " " + counterText;
+            Visibility visibility = (i is 0) ? Visibility.Public : Visibility.Unlisted;
+            Status status = await client.PublishStatus(
+                statusText,
+                visibility: visibility,
+                replyStatusId: replyStatusId,
+                mediaIds: mediaIds);
+            replyStatusId = status.Id;
+        }
+    }
+
+    private async Task SendImagesToTelegramAsync(CancellationToken token) {
+        _telegramClient ??= new TelegramBotClient(this.AppSettings.TelegramToken);
+        String chatId = this.AppSettings.TelegramChatId;
+        var telegramChunks = this.Images.Chunk(10);
+        using SemaphoreSlim throttler = new(4, 4);
+        foreach (var chunk in telegramChunks) {
+            token.ThrowIfCancellationRequested();
+
+            List<InputMediaPhoto> album = [];
+            List<Stream> streamsToDispose = [];
+            //Boolean isFirst = true;
+            try {
+                //this.StatusMessage = $"Compressing {chunk.Length} image(s) for Telegram upload...";
+                var compressionTasks = chunk.Select(async (image) => {
+                    await throttler.WaitAsync(token);
+                    try {
+                        return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxMatrixLimit: Int64.MaxValue /* unlimited */, token: token);
+                    } finally {
+                        throttler.Release();
+                    }
                 });
 
-                Attachment[] attachments = await Task.WhenAll(uploadTasks);
-                var mediaIds = attachments.Select(a => a.Id);
+                Byte[][] compressedImages = await Task.WhenAll(compressionTasks);
 
-                String counterText = $"({i + 1}/{mastodonChunks.Count})";
-                //String statusText = (i is 0) ? this.Caption + " " + counterText : counterText;
-                String statusText = $"{this.Caption} {counterText}"; //this.Caption + " " + counterText;
-                Visibility visibility = (i is 0) ? Visibility.Public : Visibility.Unlisted;
-                Status status = await client.PublishStatus(
-                    statusText,
-                    visibility: visibility,
-                    replyStatusId: replyStatusId,
-                    mediaIds: mediaIds);
-                replyStatusId = status.Id;
-
+                for (Int32 i = 0; i < chunk.Length; i++) {
+                    MemoryStream stream = new MemoryStream(compressedImages[i]);
+                    streamsToDispose.Add(stream);
+                    InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
+                    if (i is 0) {
+                        photo.Caption = this.Caption;
+                    }
+                    album.Add(photo);
+                }
+                //this.StatusMessage = $"Uploading {chunk.Length} image(s) to Telegram...";
+                await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
+            } /* catch (Exception ex) {
+                this.StatusMessage = "Failed to send images to Telegram: " + ex.Message;
+                this.IsBusy = false;
+                return;
+                } */ finally {
+                foreach (var stream in streamsToDispose) {
+                    stream.Dispose();
+                }
             }
-            this.StatusMessage = "Sent to Mastodon!";
-        } catch (OperationCanceledException) {
-            this.StatusMessage = "Cancelled.";
-        } catch (Exception ex) {
-            this.StatusMessage = "Failed to send to Mastodon: " + ex.Message;
-        } finally {
-            this.IsBusy = false;
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
         }
     }
 
@@ -328,5 +334,50 @@ public partial class PublisherViewModel : ViewModelBase {
             this.StatusMessage = "Cancelling...";
             _cancellationTokenSource.Cancel();
         }
+    }
+
+    [Flags]
+    public enum SocialPlatform : UInt32 {
+        All = UInt32.MaxValue,
+        None = UInt32.MinValue,
+        Mastodon = 0B0001,
+        Telegram = 0B0010,
+    }
+
+    public async Task StartBatchAsync(SocialPlatform platform) {
+        String[] uriList = this.BatchUri.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        this.IsBusy = true;
+        Boolean isAllDone = true;
+        foreach (String uri in uriList) {
+            try {
+                token.ThrowIfCancellationRequested();
+                this.Caption = uri.Trim();
+                await this.AnalysisUriToImagesAsync(this.Caption, token);
+                if (this.Images.Count <= 0) {
+                    throw new InvalidOperationException("No image found.");
+                }
+                if (platform.HasFlag(SocialPlatform.Mastodon)) {
+                    await this.SendImagesToMastodonAsync(token);
+                }
+                if (platform.HasFlag(SocialPlatform.Telegram)) {
+                    await this.SendImagesToTelegramAsync(token);
+                }
+            } catch (Exception ex) {
+                isAllDone = false;
+                this.StatusMessage = ex.Message;
+                break;
+            }
+            // Instead of placing `Clear` in a finally block,
+            // we try to preserve the state when exception occurs.
+            this.Clear();
+        }
+        if (isAllDone) {
+            this.StatusMessage = "All done.";
+        }
+        this.IsBusy = false;
+        _cancellationTokenSource.Dispose();
+        _cancellationTokenSource = null;
     }
 }

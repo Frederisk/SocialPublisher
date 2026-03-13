@@ -32,6 +32,8 @@ public partial class AppSettings : ObservableObject {
     //[property: JsonIgnore] No longer ignore the ImagesStoragePath. We need this stored value so that when the program starts and `TopLevel` is not available, the UI can obtain a value to display.
     [ObservableProperty]
     private String _imagesStoragePath = String.Empty;
+    [ObservableProperty]
+    private Boolean _enableBatchMode = false;
 
     partial void OnImagesStorageBookmarkChanged(String value) {
         this.UpdateImagesStoragePathAsync(value);

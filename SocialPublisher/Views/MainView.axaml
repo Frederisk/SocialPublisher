@@ -33,6 +33,10 @@
           </Grid>
           <ScrollViewer Grid.Row="1">
             <StackPanel Spacing="10">
+              <CheckBox IsChecked="{Binding AppSettings.EnableBatchMode}">
+                <TextBlock Text="Enable Batch Mode" FontWeight="SemiBold"/>
+              </CheckBox>
+
               <TextBlock Text="Telegram Bot Token" FontWeight="SemiBold" />
               <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" Watermark="123456:ABC-DEF..." Classes="revealPasswordButton" />
               <TextBlock Text="Telegram Chat ID" FontWeight="SemiBold" />
@@ -98,7 +102,20 @@
             <CheckBox Content="Alter" IsChecked="{Binding IsAlter}" />
             <CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" />
           </StackPanel>
-          <TextBox Grid.Row="1" Text="{Binding Caption}" Watermark="Enter caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="0, 0, 0, 5" />
+          <Grid Grid.Row="1" ColumnDefinitions="*,*">
+            <TextBox Grid.Column="0" Text="{Binding Caption}" Watermark="Enter the caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Classes.full-width="{Binding !AppSettings.EnableBatchMode}">
+              <TextBox.Styles>
+                <Style Selector="TextBox">
+                  <Setter Property="Margin" Value="0, 0, 2.5, 5" />
+                </Style>
+                <Style Selector="TextBox.full-width">
+                  <Setter Property="Grid.ColumnSpan" Value="2"/>
+                  <Setter Property="Margin" Value="0, 0, 0, 5" />
+                </Style>
+              </TextBox.Styles>
+            </TextBox>
+            <TextBox Grid.Column="1" Text="{Binding BatchUri}" Watermark="Enter the batch string (split by new line) here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="2.5, 0, 0, 5" IsVisible="{Binding AppSettings.EnableBatchMode}" />
+          </Grid>
           <ProgressBar Grid.Row="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
           <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0">
             <WrapPanel.Styles>
@@ -115,8 +132,8 @@
             <Button Command="{Binding PasteCommand}" Content="_Paste" IsEnabled="{Binding !IsBusy}"/>
             <Button Command="{Binding ClearCommand}" Content="_Clear" IsEnabled="{Binding !IsBusy}"/>
             <!--<Button Command="{Binding SendCommand}" Content="Send" Classes="accent" Background="Green" Foreground="White" IsEnabled="{Binding !IsBusy}" />-->
-            <Button Command="{Binding SendTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
-            <Button Command="{Binding SendMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding SendToTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding SendToMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
             <Button Command="{Binding CancelOperationCommand}" Content="_Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
           </WrapPanel>
           <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
