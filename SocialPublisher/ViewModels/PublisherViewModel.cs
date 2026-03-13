@@ -142,6 +142,11 @@ public partial class PublisherViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task Analysis() {
+        if (this.AppSettings.EnableBatchMode) {
+            await this.StartBatchAsync(SocialPlatform.None);
+            return;
+        }
+
         String uri = this.Caption.Trim();
         if (String.IsNullOrEmpty(uri)) {
             return;
@@ -197,14 +202,19 @@ public partial class PublisherViewModel : ViewModelBase {
         }
         this.Images.Clear();
         this.Caption = String.Empty;
-        this.BatchUri = String.Empty;
+        //this.BatchUri = String.Empty;
         this.StatusMessage = "Cleared.";
     }
 
     [RelayCommand]
-    public async Task SendSocial(SocialPlatform platform) {
+    public async Task SendToTelegram() => await this.SendToSocialAsync(SocialPlatform.Telegram);
+
+    [RelayCommand]
+    public async Task SendToMastodon() => await this.SendToSocialAsync(SocialPlatform.Mastodon);
+
+    public async Task SendToSocialAsync(SocialPlatform platform) {
         if (this.AppSettings.EnableBatchMode) {
-            await this.StartBatch(platform);
+            await this.StartBatchAsync(platform);
             return;
         }
 
@@ -327,22 +337,23 @@ public partial class PublisherViewModel : ViewModelBase {
     }
 
     [Flags]
-    public enum SocialPlatform: UInt32 {
+    public enum SocialPlatform : UInt32 {
         All = UInt32.MaxValue,
         None = UInt32.MinValue,
         Mastodon = 0B0001,
         Telegram = 0B0010,
     }
 
-    public async Task StartBatch(SocialPlatform platform) {
+    public async Task StartBatchAsync(SocialPlatform platform) {
         String[] uriList = this.BatchUri.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         this.IsBusy = true;
+        Boolean isAllDone = true;
         foreach (String uri in uriList) {
-            token.ThrowIfCancellationRequested();
-            this.Caption = uri.Trim();
             try {
+                token.ThrowIfCancellationRequested();
+                this.Caption = uri.Trim();
                 await this.AnalysisUriToImagesAsync(this.Caption, token);
                 if (this.Images.Count <= 0) {
                     throw new InvalidOperationException("No image found.");
@@ -354,10 +365,16 @@ public partial class PublisherViewModel : ViewModelBase {
                     await this.SendImagesToTelegramAsync(token);
                 }
             } catch (Exception ex) {
+                isAllDone = false;
                 this.StatusMessage = ex.Message;
                 break;
             }
+            // Instead of placing `Clear` in a finally block,
+            // we try to preserve the state when exception occurs.
             this.Clear();
+        }
+        if (isAllDone) {
+            this.StatusMessage = "All done.";
         }
         this.IsBusy = false;
         _cancellationTokenSource.Dispose();

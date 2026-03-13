@@ -132,8 +132,8 @@
             <Button Command="{Binding PasteCommand}" Content="_Paste" IsEnabled="{Binding !IsBusy}"/>
             <Button Command="{Binding ClearCommand}" Content="_Clear" IsEnabled="{Binding !IsBusy}"/>
             <!--<Button Command="{Binding SendCommand}" Content="Send" Classes="accent" Background="Green" Foreground="White" IsEnabled="{Binding !IsBusy}" />-->
-            <Button Command="{Binding SendTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
-            <Button Command="{Binding SendMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding SendToTelegramCommand}" Content="Send to _Telegram" Classes="accent" Background="Blue" Foreground="White" IsEnabled="{Binding !IsBusy}" />
+            <Button Command="{Binding SendToMastodonCommand}" Content="Send to _Mastodon" Classes="accent" Background="Purple" Foreground="White" IsEnabled="{Binding !IsBusy}" />
             <Button Command="{Binding CancelOperationCommand}" Content="_Cancel" Background="#FF6347" Foreground="White" IsEnabled="{Binding IsBusy}" />
           </WrapPanel>
           <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="Gray" IsEnabled="{Binding !IsBusy}"/>
