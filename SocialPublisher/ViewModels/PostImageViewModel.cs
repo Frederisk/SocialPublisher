@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using SocialPublisher.Services;
 using SocialPublisher.Utils;
 
 namespace SocialPublisher.ViewModels;
@@ -22,6 +23,7 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private Bitmap? _displayImage;
 
+    public AppSettings AppSettings { get; }
     private readonly Action<PostImageViewModel> _removeAction;
     private readonly Action<PostImageViewModel> _openAction;
 
@@ -30,17 +32,19 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
             this.ImageBytes = [];
             _removeAction = _ => { };
             _openAction = _ => { };
+            this.AppSettings = new AppSettings();
         } else {
             throw new InvalidOperationException("Use the constructor with parameters.");
         }
     }
 
     [ActivatorUtilitiesConstructor]
-    public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction, Action<PostImageViewModel> openAction) {
+    public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction, Action<PostImageViewModel> openAction, AppSettings settings) {
         this.ImageBytes = bytes;
         _removeAction = removeAction;
         this.UpdateDisplayImageAsync();
         _openAction = openAction;
+        this.AppSettings = settings;
     }
 
     [RelayCommand]

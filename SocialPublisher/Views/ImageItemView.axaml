@@ -35,7 +35,20 @@
           </Style>
         </Button.Styles>
         <!-- Width="180" Height="180" -->
-        <Image Source="{Binding DisplayImage}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+        <!--Grid-->
+        <Image Source="{Binding DisplayImage}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" Classes.acrylic="{Binding AppSettings.IsNsfwTime}" >
+          <Image.Styles>
+            <Style Selector="Image.acrylic">
+              <Setter Property="Effect" Value="blur(25)"/>
+            </Style>
+          </Image.Styles>
+        </Image>
+        <!--          <ExperimentalAcrylicBorder>
+        <ExperimentalAcrylicBorder.Material>
+        <ExperimentalAcrylicMaterial BackgroundSource="Digger" TintColor="Transparent" TintOpacity="0.001" MaterialOpacity="0.65"/>
+        </ExperimentalAcrylicBorder.Material>
+        </ExperimentalAcrylicBorder>-->
+        <!--/Grid-->
       </Button>
     </Border>
     <Border Classes="Overlay" Background="#99000000" VerticalAlignment="Bottom" CornerRadius="0, 0, 8, 8" Height="40">

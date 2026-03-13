@@ -117,7 +117,7 @@ public partial class PublisherViewModel : ViewModelBase {
     public async Task Paste() {
         UInt32 insertImageCount = 0;
         await foreach (var image in this._clipboardService.GetImagesFromClipboardAsync()) {
-            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
+            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
             insertImageCount++;
         }
         if (insertImageCount is not 0) {
@@ -171,7 +171,7 @@ public partial class PublisherViewModel : ViewModelBase {
 
     private async Task AnalysisUriToImagesAsync(String uri, CancellationToken token) {
         await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
-            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox));
+            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
         }
     }
 

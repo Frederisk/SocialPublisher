@@ -34,6 +34,8 @@ public partial class AppSettings : ObservableObject {
     private String _imagesStoragePath = String.Empty;
     [ObservableProperty]
     private Boolean _enableBatchMode = false;
+    [ObservableProperty]
+    private Boolean _isNsfwTime = false;
 
     partial void OnImagesStorageBookmarkChanged(String value) {
         this.UpdateImagesStoragePathAsync(value);
