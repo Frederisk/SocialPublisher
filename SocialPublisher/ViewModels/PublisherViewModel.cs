@@ -157,7 +157,6 @@ public partial class PublisherViewModel : ViewModelBase {
         var token = _cancellationTokenSource.Token;
         try {
             await this.AnalysisUriToImagesAsync(uri, token);
-            this.StatusMessage = $"Analysis completed.";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Analysis cancelled.";
         } catch (Exception ex) {
@@ -170,9 +169,11 @@ public partial class PublisherViewModel : ViewModelBase {
     }
 
     private async Task AnalysisUriToImagesAsync(String uri, CancellationToken token) {
+        this.StatusMessage = "Starting Analusis";
         await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
             this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
         }
+        this.StatusMessage = $"Analysis completed. Number of images: {this.Images.Count}";
     }
 
     private void RemoveAction(PostImageViewModel image) {
@@ -218,14 +219,14 @@ public partial class PublisherViewModel : ViewModelBase {
             return;
         }
 
-        if (this.Images.Count is 0) {
-            return;
-        }
         this.IsBusy = true;
-        this.StatusMessage = $"Sending to {platform.ToString()}...";
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
+            this.StatusMessage = $"Sending to {platform.ToString()}...";
+            if (this.Images.Count is 0) {
+                throw new InvalidOperationException("No image found.");
+            }
             if (platform.HasFlag(SocialPlatform.Mastodon)) {
                 await this.SendImagesToMastodonAsync(token);
             }
@@ -350,12 +351,14 @@ public partial class PublisherViewModel : ViewModelBase {
         var token = _cancellationTokenSource.Token;
         this.IsBusy = true;
         Boolean isAllDone = true;
+        this.Clear();
         foreach (String uri in uriList) {
             try {
                 token.ThrowIfCancellationRequested();
                 this.Caption = uri.Trim();
                 await this.AnalysisUriToImagesAsync(this.Caption, token);
-                if (this.Images.Count <= 0) {
+                this.StatusMessage = $"Sending to {platform.ToString()}...";
+                if (this.Images.Count is 0) {
                     throw new InvalidOperationException("No image found.");
                 }
                 if (platform.HasFlag(SocialPlatform.Mastodon)) {
@@ -364,6 +367,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 if (platform.HasFlag(SocialPlatform.Telegram)) {
                     await this.SendImagesToTelegramAsync(token);
                 }
+                this.StatusMessage = $"Sent to {platform.ToString()}!";
             } catch (Exception ex) {
                 isAllDone = false;
                 this.StatusMessage = ex.Message;
