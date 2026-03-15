@@ -151,7 +151,6 @@ public partial class PublisherViewModel : ViewModelBase {
         if (String.IsNullOrEmpty(uri)) {
             return;
         }
-        this.StatusMessage = "Analyzing images from URL...";
         this.IsBusy = true;
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
@@ -169,7 +168,7 @@ public partial class PublisherViewModel : ViewModelBase {
     }
 
     private async Task AnalysisUriToImagesAsync(String uri, CancellationToken token) {
-        this.StatusMessage = "Starting Analusis";
+        this.StatusMessage = "Analyzing images from URL...";
         await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, this.ProgressReporter, token)) {
             this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
         }
