@@ -444,14 +444,14 @@ public partial class PublisherViewModel : ViewModelBase {
             } catch (OperationCanceledException) {
                 throw;
             } catch (Exception ex) when (handleRateLimit && IsTooManyRequests(ex)) {
-                this.StatusMessage = $"Too many requests. Waiting to 5 minutes...";
+                this.StatusMessage = $"Rate limit exceeded (429). Waiting for 5 minutes...";
                 await Task.Delay(TimeSpan.FromMinutes(5), token);
             } catch (Exception ex) {
                 attempts++;
                 if (attempts >= maxRetries) {
                     throw;
                 }
-                this.StatusMessage = $"Network failure, {ex.Message} Retrying...";
+                this.StatusMessage = $"Network issue, {ex.Message}. Retrying ({attempts}/{maxRetries}) in 5 seconds...";
                 await Task.Delay(TimeSpan.FromSeconds(5), token);
             }
         }
