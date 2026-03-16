@@ -57,13 +57,12 @@ public partial class PublisherViewModel : ViewModelBase {
     private String _batchUri = String.Empty;
 
     [ObservableProperty]
-    private String _statusMessage = "Ready to Paste.";
+    private String _statusMessage = "Ready.";
 
     [ObservableProperty]
     private Boolean _isBusy = false;
 
     private TelegramBotClient? _telegramClient;
-
     private MastodonClient? _mastodonClient;
     private MastodonClient? _alterMastodonClient;
 
@@ -91,7 +90,7 @@ public partial class PublisherViewModel : ViewModelBase {
         _urlAnalysisImagesService = urlAnalysisImagesService;
         _settingService = settingService;
         _iOPickerService = iOPickerService;
-        _progressReporter = new Progress<String>(message => StatusMessage = message);
+        _progressReporter = new Progress<String>(message => this.StatusMessage = message);
     }
 
     [RelayCommand]
@@ -276,12 +275,14 @@ public partial class PublisherViewModel : ViewModelBase {
                 token.ThrowIfCancellationRequested();
                 //this.StatusMessage = $"Compressing image {Array.IndexOf(chunk, image) + 1}/{chunk.Length} for Mastodon upload...";
                 Byte[] compressedImage = await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxDimensionSum: Int32.MaxValue /* unlimited */, maxFileSizeBytes: 16 * 1024 * 1024 /* 16MiB */, token: token);
-                using MemoryStream stream = new(compressedImage);
                 //this.StatusMessage = $"Uploading image {Array.IndexOf(chunk, image) + 1} of {chunk.Length} in chunk {i + 1} of {mastodonChunks.Count}...";
                 //return await client.UploadMedia(stream);
                 return await this.ExecuteApiWithRetryAsync(
-                    action: () => client.UploadMedia(stream),
-                    resetStreamAction: () => stream.Position = 0,
+                    action: async () => {
+                        using MemoryStream stream = new(compressedImage);
+                        return await client.UploadMedia(stream);
+                    },
+                    //resetStreamAction: null,
                     token: token,
                     handleRateLimit: true
                     );
@@ -303,7 +304,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 visibility: visibility,
                 replyStatusId: replyStatusId,
                 mediaIds: mediaIds),
-                resetStreamAction: null,
+                //resetStreamAction: null,
                 token: token,
                 handleRateLimit: false
                 );
@@ -323,46 +324,45 @@ public partial class PublisherViewModel : ViewModelBase {
 
             this.StatusMessage = $"Compressing images for Telegram: Chunk {i + 1} of {telegramChunks.Length}...";
 
-            List<InputMediaPhoto> album = [];
-            List<Stream> streamsToDispose = [];
-            try {
-                //this.StatusMessage = $"Compressing {chunk.Length} image(s) for Telegram upload...";
-                var compressionTasks = chunk.Select(async (image) => {
-                    await throttler.WaitAsync(token);
+            //this.StatusMessage = $"Compressing {chunk.Length} image(s) for Telegram upload...";
+            var compressionTasks = chunk.Select(async (image) => {
+                await throttler.WaitAsync(token);
+                try {
+                    return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxMatrixLimit: Int64.MaxValue /* unlimited */, token: token);
+                } finally {
+                    throttler.Release();
+                }
+            });
+
+            Byte[][] compressedImages = await Task.WhenAll(compressionTasks);
+
+            this.StatusMessage = $"Uploading chunk {i + 1} to Telegram ({chunk.Length} images)...";
+            await this.ExecuteApiWithRetryAsync(
+                action: async () => {
+                    List<InputMediaPhoto> album = [];
+                    List<Stream> streamsToDispose = [];
                     try {
-                        return await ImageHelper.ProcessAndCompressImageAsync(image.ImageBytes, maxMatrixLimit: Int64.MaxValue /* unlimited */, token: token);
-                    } finally {
-                        throttler.Release();
-                    }
-                });
-
-                Byte[][] compressedImages = await Task.WhenAll(compressionTasks);
-
-                for (Int32 ii = 0; ii < chunk.Length; ii++) {
-                    MemoryStream stream = new MemoryStream(compressedImages[i]);
-                    streamsToDispose.Add(stream);
-                    InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
-                    if (ii is 0) {
-                        photo.Caption = this.Caption;
-                    }
-                    album.Add(photo);
-                }
-                this.StatusMessage = $"Uploading chunk {i + 1} to Telegram ({chunk.Length} images)...";
-                await this.ExecuteApiWithRetryAsync(
-                    action: () => _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token),
-                    resetStreamAction: () => {
-                        foreach (var stream in streamsToDispose) {
-                            stream.Position = 0;
+                        for (Int32 ii = 0; ii < chunk.Length; ii++) {
+                            MemoryStream stream = new MemoryStream(compressedImages[ii]);
+                            streamsToDispose.Add(stream);
+                            InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
+                            if (ii is 0) {
+                                photo.Caption = this.Caption;
+                            }
+                            album.Add(photo);
                         }
-                    },
-                    token: token,
-                    handleRateLimit: false
-                    );
-            } finally {
-                foreach (var stream in streamsToDispose) {
-                    stream.Dispose();
-                }
-            }
+                    } finally {
+                        foreach (var stream in streamsToDispose) {
+                            stream.Dispose();
+                        }
+                    }
+
+                    return await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
+                },
+                //resetStreamAction: null,
+                token: token,
+                handleRateLimit: false
+                );
         }
     }
 
@@ -432,15 +432,14 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = null;
     }
 
-    private async Task<T> ExecuteApiWithRetryAsync<T>(Func<Task<T>> action, Action? resetStreamAction, CancellationToken token, Boolean handleRateLimit = false) {
-        Int32 maxRetries = 3;
+    private async Task<T> ExecuteApiWithRetryAsync<T>(Func<Task<T>> action, CancellationToken token, Boolean handleRateLimit = false) {
+        Int32 maxRetries = 5;
         Int32 attempts = 0;
 
         while (true) {
             token.ThrowIfCancellationRequested();
-
             try {
-                resetStreamAction?.Invoke();
+                //resetStreamAction?.Invoke();
                 return await action();
             } catch (OperationCanceledException) {
                 throw;
@@ -453,7 +452,7 @@ public partial class PublisherViewModel : ViewModelBase {
                     throw;
                 }
                 this.StatusMessage = $"Network failure, {ex.Message} Retrying...";
-                await Task.Delay(TimeSpan.FromSeconds(3), token);
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
             }
         }
     }
@@ -473,5 +472,4 @@ public partial class PublisherViewModel : ViewModelBase {
         }
         return false;
     }
-
 }
