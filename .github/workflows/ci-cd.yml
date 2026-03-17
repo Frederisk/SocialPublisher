@@ -1,0 +1,126 @@
+name: Avalonia CI/CD
+
+on:
+  push:
+    branches: ['main', 'master']
+  pull_request:
+    branches: ['main', 'master']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'such as: v1.0.0, v1.0.1-preview'
+        required: true
+        default: '0.0.0-preview'
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    name: Build & Test Solution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore workloads
+        run: dotnet workload restore SocialPublisher.slnx
+
+      - name: Restore packages
+        run: dotnet restore SocialPublisher.slnx
+
+      - name: Build
+        run: dotnet build SocialPublisher.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test SocialPublisher.slnx --configuration Release --no-build --verbosity normal
+
+  publish:
+    name: Publish & Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Processing version number
+        run: |
+          using namespace System;
+          [String]$version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            ()'${{ github.event.inputs.version }}' -replace '^v', '')
+          } else {
+            ('${{ github.ref }}' -replace '^refs/tags/v', '')
+          }
+          $version = ($version -replace '[\r\n]', '').Trim();
+          [String]$isPrerelease = if ($version -match '-') { 'true' } else { 'false' };
+
+          Write-Host -Message "Preparing to release version: $version (Pre-release: $isPrerelease)";
+
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version";
+          Add-Content -Path $env:GITHUB_ENV -Value "IS_PRERELEASE=$isPrerelease"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore workloads
+        run: dotnet workload restore SocialPublisher.slnx
+
+      - name: Publish Windows Desktop AMD64
+        run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime win-x64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/win-x64
+
+      - name: Publish Windows Desktop ARM64
+        run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime win-arm64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/win-arm64
+
+      - name: Publish Linux Desktop AMD64
+        run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime linux-x64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/linux-x64
+
+      - name: Publish Linux Desktop ARM64
+        run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime linux-arm64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/linux-arm64
+
+      # - name: Publish macOS Desktop AMD64
+      #   run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime osx-x64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/osx-x64
+
+      # - name: Publish macOS Desktop ARM64
+      #   run: dotnet publish SocialPublisher.Desktop/SocialPublisher.Desktop.csproj --configuration Release --runtime osx-arm64 --self-contained false --property:PublishSingleFile=true --property:UseMonoRuntime=false --property:UseCoreCLR=true --property:Version=${{ env.VERSION }} --output ./release-output/osx-arm64
+
+      - name: Publish Android APK
+        run: dotnet publish SocialPublisher.Android/SocialPublisher.Android.csproj --configuration Release --property:ApplicationVersion=1 --property:ApplicationDisplayVersion=${{ env.VERSION }} --output ./release-output/android
+
+      # - name: Publish iOS IPA
+      #   run: dotnet publish SocialPublisher.iOS/SocialPublisher.iOS.csproj --configuration Release --property:ApplicationVersion=1 --property:ApplicationDisplayVersion=${{ env.VERSION }} --output ./release-output/ios # --property:ArchiveOnBuild=true
+
+      - name: Archive packages
+        run: |
+          Compress-Archive -Path 'release-output/win-x64/*' -DestinationPath 'release-output/SocialPublisher-Windows-AMD64.zip' -Force;
+          Compress-Archive -Path 'release-output/win-arm64/*' -DestinationPath 'release-output/SocialPublisher-Windows-ARM64.zip' -Force;
+          Compress-Archive -Path 'release-output/linux-x64/*' -DestinationPath 'release-output/SocialPublisher-Linux-AMD64.zip' -Force;
+          Compress-Archive -Path 'release-output/linux-arm64/*' -DestinationPath 'release-output/SocialPublisher-Linux-ARM64.zip' -Force;
+          Get-ChildItem -Path 'release-output/android' -Filter '*-Signed.apk' | Select-Object -First 1 | Copy-Item -Destination 'release-output/SocialPublisher-Android.apk';
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: SocialPublisher v${{ env.VERSION }}
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
+          generate_release_notes: true
+          files: |
+            release-output/SocialPublisher-Windows-AMD64.zip
+            release-output/SocialPublisher-Windows-ARM64.zip
+            release-output/SocialPublisher-Linux-AMD64.zip
+            release-output/SocialPublisher-Linux-ARM64.zip
+            release-output/SocialPublisher-Android.apk

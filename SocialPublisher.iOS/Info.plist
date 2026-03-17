@@ -5,11 +5,11 @@
 	<key>CFBundleDisplayName</key>
 	<string>SocialPublisher</string>
 	<key>CFBundleIdentifier</key>
-	<string>companyName.SocialPublisher</string>
+	<string>com.frederisk.SocialPublisher</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<string>1.0.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MinimumOSVersion</key>
