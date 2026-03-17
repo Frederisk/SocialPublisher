@@ -34,16 +34,16 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore workloads
-        run: dotnet workload restore SocialPublisher-NoApple.slnf
+        run: dotnet workload restore SocialPublisher.NoApple.slnf
 
       - name: Restore packages
-        run: dotnet restore SocialPublisher-NoApple.slnf
+        run: dotnet restore SocialPublisher.NoApple.slnf
 
       - name: Build
-        run: dotnet build SocialPublisher-NoApple.slnf --configuration Release --no-restore
+        run: dotnet build SocialPublisher.NoApple.slnf --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test SocialPublisher-NoApple.slnf --configuration Release --no-build --verbosity normal
+        run: dotnet test SocialPublisher.NoApple.slnf --configuration Release --no-build --verbosity normal
 
   publish:
     name: Publish & Release
