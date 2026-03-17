@@ -65,7 +65,7 @@ jobs:
       - name: Processing version number
         run: |
           [string]$version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
-            ()'${{ github.event.inputs.version }}' -replace '^v', '')
+            ('${{ github.event.inputs.version }}' -replace '^v', '')
           } else {
             ('${{ github.ref }}' -replace '^refs/tags/v', '')
           }
