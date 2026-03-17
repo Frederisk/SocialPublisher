@@ -64,14 +64,13 @@ jobs:
 
       - name: Processing version number
         run: |
-          using namespace System;
-          [String]$version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+          [string]$version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
             ()'${{ github.event.inputs.version }}' -replace '^v', '')
           } else {
             ('${{ github.ref }}' -replace '^refs/tags/v', '')
           }
           $version = ($version -replace '[\r\n]', '').Trim();
-          [String]$isPrerelease = if ($version -match '-') { 'true' } else { 'false' };
+          [string]$isPrerelease = if ($version -match '-') { 'true' } else { 'false' };
 
           Write-Host -Message "Preparing to release version: $version (Pre-release: $isPrerelease)";
 
