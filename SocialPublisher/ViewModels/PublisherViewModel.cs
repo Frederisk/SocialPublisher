@@ -51,6 +51,9 @@ public partial class PublisherViewModel : ViewModelBase {
     private Boolean _isLowQuality = false;
 
     [ObservableProperty]
+    private Boolean _enableBatchMode = false;
+
+    [ObservableProperty]
     private String _caption = String.Empty;
 
     [ObservableProperty]
@@ -77,6 +80,10 @@ public partial class PublisherViewModel : ViewModelBase {
 #pragma warning disable CS8618
     public PublisherViewModel() {
         // Parameterless constructor for design-time data context
+        if (!Design.IsDesignMode) {
+            throw new InvalidOperationException("Use the constructor with parameters.");
+        }
+        this.Images.Add(new PostImageViewModel());
     }
 #pragma warning restore CS8618
 
@@ -150,7 +157,7 @@ public partial class PublisherViewModel : ViewModelBase {
 
     [RelayCommand]
     public async Task Analysis() {
-        if (this.AppSettings.EnableBatchMode) {
+        if (this.EnableBatchMode) {
             await this.StartBatchAsync(SocialPlatform.None);
             return;
         }
@@ -226,7 +233,7 @@ public partial class PublisherViewModel : ViewModelBase {
     public async Task SendToMastodon() => await this.SendToSocialAsync(SocialPlatform.Mastodon);
 
     public async Task SendToSocialAsync(SocialPlatform platform) {
-        if (this.AppSettings.EnableBatchMode) {
+        if (this.EnableBatchMode) {
             await this.StartBatchAsync(platform);
             return;
         }

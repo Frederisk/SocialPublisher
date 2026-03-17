@@ -27,16 +27,14 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     private readonly Action<PostImageViewModel> _removeAction;
     private readonly Action<PostImageViewModel> _openAction;
 
+#pragma warning disable CS8618
     public PostImageViewModel() {
-        if (Design.IsDesignMode) {
-            this.ImageBytes = [];
-            _removeAction = _ => { };
-            _openAction = _ => { };
-            this.AppSettings = new AppSettings();
-        } else {
+        if (!Design.IsDesignMode) {
             throw new InvalidOperationException("Use the constructor with parameters.");
         }
+        //this.AppSettings = new AppSettings();
     }
+#pragma warning restore CS8618
 
     [ActivatorUtilitiesConstructor]
     public PostImageViewModel(Byte[] bytes, Action<PostImageViewModel> removeAction, Action<PostImageViewModel> openAction, AppSettings settings) {

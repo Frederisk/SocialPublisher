@@ -34,9 +34,9 @@
           </Grid>
           <ScrollViewer Grid.Row="1">
             <StackPanel Spacing="10">
-              <CheckBox IsChecked="{Binding AppSettings.EnableBatchMode}">
-                <TextBlock Text="Enable Batch Mode" FontWeight="SemiBold"/>
-              </CheckBox>
+              <!--<CheckBox IsChecked="{Binding EnableBatchMode}">
+              <TextBlock Text="Enable Batch Mode" FontWeight="SemiBold"/>
+              </CheckBox>-->
               <CheckBox IsChecked="{Binding AppSettings.IsNsfwTime}">
                 <TextBlock Text="Is NSFW Time" FontWeight="SemiBold"/>
               </CheckBox>
@@ -104,10 +104,11 @@
         <Grid Grid.Row="2" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0, 5, 0, 0">
           <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5">
             <CheckBox Content="Alter" IsChecked="{Binding IsAlter}" IsEnabled="{Binding !IsBusy}" />
-            <CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" IsEnabled="{Binding !IsBusy}" />
+            <CheckBox Content="Batch Mode" IsChecked="{Binding EnableBatchMode}" IsEnabled="{Binding !IsBusy}" />
+            <!--<CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" IsEnabled="{Binding !IsBusy}" />-->
           </StackPanel>
           <Grid Grid.Row="1" ColumnDefinitions="*,*">
-            <TextBox Grid.Column="0" Text="{Binding Caption}" Watermark="Enter the caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Classes.full-width="{Binding !AppSettings.EnableBatchMode}" >
+            <TextBox Grid.Column="0" Text="{Binding Caption}" Watermark="Enter the caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Classes.full-width="{Binding !EnableBatchMode}" >
               <TextBox.Styles>
                 <Style Selector="TextBox">
                   <Setter Property="Margin" Value="0, 0, 2.5, 5" />
@@ -120,11 +121,11 @@
               <TextBox.IsReadOnly>
                 <MultiBinding Converter="{x:Static cv:BoolConverters.Or}">
                   <Binding Path="IsBusy" />
-                  <Binding Path="AppSettings.EnableBatchMode" />
+                  <Binding Path="EnableBatchMode" />
                 </MultiBinding>
               </TextBox.IsReadOnly>
             </TextBox>
-            <TextBox Grid.Column="1" Text="{Binding BatchUri}" Watermark="Enter the batch string (split by new line) here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="2.5, 0, 0, 5" IsVisible="{Binding AppSettings.EnableBatchMode}" IsReadOnly="{Binding IsBusy}" />
+            <TextBox Grid.Column="1" Text="{Binding BatchUri}" Watermark="Enter the batch string (split by new line) here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="2.5, 0, 0, 5" IsVisible="{Binding EnableBatchMode}" IsReadOnly="{Binding IsBusy}" />
           </Grid>
           <ProgressBar Grid.Row="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
           <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0">
