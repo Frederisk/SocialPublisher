@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "SocialPublisher.slnx",
+    "projects": [
+      "SocialPublisher.Android\\SocialPublisher.Android.csproj",
+      "SocialPublisher.Browser\\SocialPublisher.Browser.csproj",
+      "SocialPublisher.Desktop\\SocialPublisher.Desktop.csproj",
+      "SocialPublisher\\SocialPublisher.csproj"
+    ]
+  }
+}
