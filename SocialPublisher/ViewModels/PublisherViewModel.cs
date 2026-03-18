@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -358,13 +358,12 @@ public partial class PublisherViewModel : ViewModelBase {
                             }
                             album.Add(photo);
                         }
+                        return await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
                     } finally {
                         foreach (var stream in streamsToDispose) {
                             stream.Dispose();
                         }
                     }
-
-                    return await _telegramClient.SendMediaGroup(chatId, album, cancellationToken: token);
                 },
                 //resetStreamAction: null,
                 token: token,

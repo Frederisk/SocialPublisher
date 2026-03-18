@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
 using PixivCS.Api;
@@ -11,6 +11,7 @@ using SocialPublisher.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -112,6 +113,9 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         }
         //String illustId = IllustIdRegex().Match(url).Groups[1].Value;
         IllustDetail illust = await _pixivAppApi.GetIllustDetailAsync(illustId, cancellationToken);
+        if (illust.Illust?.Tags.Any(t => t.Name is "AIイラスト" or "AI-Generated" or "AI生成") is true || illust.Illust?.IllustAiType is 2 /* 0: undefined, 1: human being, 2: AI*/) {
+            throw new InvalidDataException("AI-generated drawings are not accepted.");
+        }
         if (illust.Illust?.PageCount > 1) {
             using SemaphoreSlim throttler = new(4, 4);
             List<Task<Byte[]>> downloadTask = [];
