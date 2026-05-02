@@ -42,26 +42,26 @@
               </CheckBox>
 
               <TextBlock Text="Telegram Bot Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" Watermark="123456:ABC-DEF..." Classes="revealPasswordButton" />
+              <TextBox Text="{Binding AppSettings.TelegramToken}" PasswordChar="*" PlaceholderText="123456:ABC-DEF..." Classes="revealPasswordButton" />
               <TextBlock Text="Telegram Chat ID" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.TelegramChatId}" Watermark="-123456789" />
+              <TextBox Text="{Binding AppSettings.TelegramChatId}" PlaceholderText="-123456789" />
 
               <TextBlock Text="Mastodon Instance" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.MastodonInstanceUrl}" Watermark="https://mastodon.social" />
+              <TextBox Text="{Binding AppSettings.MastodonInstanceUrl}" PlaceholderText="https://mastodon.social" />
               <TextBlock Text="Mastodon Access Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.MastodonAccessToken}" PasswordChar="*" Watermark="Your Mastodon Access Token" Classes="revealPasswordButton" />
+              <TextBox Text="{Binding AppSettings.MastodonAccessToken}" PasswordChar="*" PlaceholderText="Your Mastodon Access Token" Classes="revealPasswordButton" />
 
               <TextBlock Text="Alter Mastodon Instance" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.AlterMastodonInstanceUrl}" Watermark="https://mastodon.online" />
+              <TextBox Text="{Binding AppSettings.AlterMastodonInstanceUrl}" PlaceholderText="https://mastodon.online" />
               <TextBlock Text="Alter Mastodon Access Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.AlterMastodonAccessToken}" PasswordChar="*" Watermark="Your Alter Mastodon Access Token" Classes="revealPasswordButton" />
+              <TextBox Text="{Binding AppSettings.AlterMastodonAccessToken}" PasswordChar="*" PlaceholderText="Your Alter Mastodon Access Token" Classes="revealPasswordButton" />
 
               <TextBlock Text="Pixiv Refresh Token" FontWeight="SemiBold" />
-              <TextBox Text="{Binding AppSettings.PixivRefreshToken}" PasswordChar="*" Watermark="Your Pixiv Refresh Token" Classes="revealPasswordButton" />
+              <TextBox Text="{Binding AppSettings.PixivRefreshToken}" PasswordChar="*" PlaceholderText="Your Pixiv Refresh Token" Classes="revealPasswordButton" />
 
               <TextBlock Text="Images Storage Path" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="*, Auto, Auto">
-                <TextBox Grid.Column="0" Text="{Binding AppSettings.ImagesStoragePath}" IsReadOnly="True" Watermark="Your Images Stroage Path" />
+                <TextBox Grid.Column="0" Text="{Binding AppSettings.ImagesStoragePath}" IsReadOnly="True" PlaceholderText="Your Images Stroage Path" />
                 <Button Grid.Column="1" Command="{Binding PickImagesStorageFolderCommand}">
                   <Button.Content>
                     <ic:SymbolIcon Symbol="Folder" FontSize="18" />
@@ -108,7 +108,7 @@
             <!--<CheckBox Content="Low Quality" IsChecked="{Binding IsLowQuality}" IsEnabled="{Binding !IsBusy}" />-->
           </StackPanel>
           <Grid Grid.Row="1" ColumnDefinitions="*,*">
-            <TextBox Grid.Column="0" Text="{Binding Caption}" Watermark="Enter the caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Classes.full-width="{Binding !EnableBatchMode}" >
+            <TextBox Grid.Column="0" Text="{Binding Caption}" PlaceholderText="Enter the caption here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Classes.full-width="{Binding !EnableBatchMode}" >
               <TextBox.Styles>
                 <Style Selector="TextBox">
                   <Setter Property="Margin" Value="0, 0, 2.5, 5" />
@@ -125,7 +125,7 @@
                 </MultiBinding>
               </TextBox.IsReadOnly>
             </TextBox>
-            <TextBox Grid.Column="1" Text="{Binding BatchUri}" Watermark="Enter the batch string (split by new line) here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="2.5, 0, 0, 5" IsVisible="{Binding EnableBatchMode}" IsReadOnly="{Binding IsBusy}" />
+            <TextBox Grid.Column="1" Text="{Binding BatchUri}" PlaceholderText="Enter the batch string (split by new line) here..." AcceptsReturn="True" MinHeight="60" MaxHeight="120" Margin="2.5, 0, 0, 5" IsVisible="{Binding EnableBatchMode}" IsReadOnly="{Binding IsBusy}" />
           </Grid>
           <ProgressBar Grid.Row="2" IsIndeterminate="{Binding IsBusy}" IsVisible="True" Margin="0, 0, 0, 5"/>
           <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0">
