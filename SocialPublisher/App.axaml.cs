@@ -30,11 +30,11 @@ public partial class App : Application {
         collection.AddTransient<PublisherViewModel>();
         this.Services = collection.BuildServiceProvider();
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+        if (this.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             desktop.MainWindow = new MainWindow {
                 DataContext = this.Services.GetRequiredService<PublisherViewModel>()
             };
-        } else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform) {
+        } else if (this.ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform) {
             singleViewPlatform.MainView = new MainView {
                 DataContext = this.Services.GetRequiredService<PublisherViewModel>()
             };
