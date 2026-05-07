@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
@@ -16,9 +16,9 @@ using System.Threading.Tasks;
 namespace SocialPublisher.Services;
 
 public interface IClipboardService {
-    public IAsyncEnumerable<Byte[]> GetImagesFromClipboardAsync();
+    IAsyncEnumerable<Byte[]> GetImagesFromClipboardAsync();
 
-    public Task<String?> GetTextFromClipboardAsync();
+    Task<String?> GetTextFromClipboardAsync();
 }
 
 public class AvaloniaClipboardService : IClipboardService {
