@@ -36,34 +36,32 @@ public partial class PublisherViewModel : ViewModelBase {
     public AppSettings AppSettings => _settingService.Settings;
 
     [ObservableProperty]
-    private Boolean _isLightboxOpen = false;
+    public partial Boolean IsLightboxOpen { get; set; } = false;
 
     [ObservableProperty]
-    private Bitmap? _lightboxImage;
+    public partial Bitmap? LightboxImage { get; set; }
 
     [ObservableProperty]
-    private Boolean _isSettingsOpen = false;
+    public partial Boolean IsSettingsOpen { get; set; } = false;
 
     [ObservableProperty]
-    private Boolean _isAlter = false;
+    public partial Boolean IsAlter { get; set; } = false;
 
     [ObservableProperty]
-    private Boolean _isLowQuality = false;
+    public partial Boolean IsLowQuality { get; set; } = false;
 
     [ObservableProperty]
-    private Boolean _enableBatchMode = false;
+    public partial Boolean EnableBatchMode { get; set; } = false;
+    [ObservableProperty]
+    public partial String Caption { get; set; } = String.Empty;
+    [ObservableProperty]
+    public partial String BatchUri { get; set; } = String.Empty;
 
     [ObservableProperty]
-    private String _caption = String.Empty;
+    public partial String StatusMessage { get; set; } = "Ready.";
 
     [ObservableProperty]
-    private String _batchUri = String.Empty;
-
-    [ObservableProperty]
-    private String _statusMessage = "Ready.";
-
-    [ObservableProperty]
-    private Boolean _isBusy = false;
+    public partial Boolean IsBusy { get; set; } = false;
 
     private TelegramBotClient? _telegramClient;
     private MastodonClient? _mastodonClient;
@@ -130,14 +128,14 @@ public partial class PublisherViewModel : ViewModelBase {
     [RelayCommand]
     public async Task Paste() {
         Int32 insertImageCount = 0;
-        await foreach (var image in this._clipboardService.GetImagesFromClipboardAsync()) {
-            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
+        await foreach (var image in _clipboardService.GetImagesFromClipboardAsync()) {
+            this.Images.Add(new PostImageViewModel(image, this.RemoveAction, this.OpenLightbox, this.AppSettings));
             insertImageCount++;
         }
         if (insertImageCount is not 0) {
             this.StatusMessage = $"Successfully pasted {insertImageCount} image(s) from clipboard.";
         } else {
-            var text = await this._clipboardService.GetTextFromClipboardAsync();
+            var text = await _clipboardService.GetTextFromClipboardAsync();
             if (!String.IsNullOrEmpty(text)) {
                 this.Caption = text;
                 this.StatusMessage = "Text caption loaded from clipboard.";
@@ -184,8 +182,8 @@ public partial class PublisherViewModel : ViewModelBase {
 
     private async Task AnalysisUriToImagesAsync(String uri, CancellationToken token) {
         this.StatusMessage = "Analyzing images from URL...";
-        await foreach (var image in this._urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, this._progressReporter, token)) {
-            this.Images.Add(new PostImageViewModel(image, RemoveAction, OpenLightbox, this.AppSettings));
+        await foreach (var image in _urlAnalysisImagesService.AnalysisImagesAsync(uri, this.AppSettings.ImagesStorageBookmark, _progressReporter, token)) {
+            this.Images.Add(new PostImageViewModel(image, this.RemoveAction, this.OpenLightbox, this.AppSettings));
         }
         this.StatusMessage = $"Analysis completed. Number of images: {this.Images.Count}";
     }
@@ -242,7 +240,7 @@ public partial class PublisherViewModel : ViewModelBase {
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         try {
-            this.StatusMessage = $"Sending to {platform.ToString()}...";
+            this.StatusMessage = $"Sending to {platform}...";
             if (this.Images.Count is 0) {
                 throw new InvalidOperationException("No image found.");
             }
@@ -252,11 +250,11 @@ public partial class PublisherViewModel : ViewModelBase {
             if (platform.HasFlag(SocialPlatform.Telegram)) {
                 await this.SendImagesToTelegramAsync(token);
             }
-            this.StatusMessage = $"Sent to {platform.ToString()}!";
+            this.StatusMessage = $"Sent to {platform}!";
         } catch (OperationCanceledException) {
             this.StatusMessage = "Sending cancelled.";
         } catch (Exception ex) {
-            this.StatusMessage = $"Failed to send images to {platform.ToString()}: " + ex.Message;
+            this.StatusMessage = $"Failed to send images to {platform}: " + ex.Message;
         } finally {
             this.IsBusy = false;
             _cancellationTokenSource.Dispose();
@@ -324,7 +322,6 @@ public partial class PublisherViewModel : ViewModelBase {
         String chatId = this.AppSettings.TelegramChatId;
         var telegramChunks = this.Images.Chunk(10).ToArray();
         using SemaphoreSlim throttler = new(4, 4);
-        //foreach (var chunk in telegramChunks) {
         for (Int32 i = 0; i < telegramChunks.Length; i++) {
             token.ThrowIfCancellationRequested();
             var chunk = telegramChunks[i];
@@ -350,9 +347,9 @@ public partial class PublisherViewModel : ViewModelBase {
                     List<Stream> streamsToDispose = [];
                     try {
                         for (Int32 ii = 0; ii < chunk.Length; ii++) {
-                            MemoryStream stream = new MemoryStream(compressedImages[ii]);
+                            MemoryStream stream = new(compressedImages[ii]);
                             streamsToDispose.Add(stream);
-                            InputMediaPhoto photo = new InputMediaPhoto(InputFile.FromStream(stream));
+                            InputMediaPhoto photo = new(InputFile.FromStream(stream));
                             if (ii is 0) {
                                 photo.Caption = this.Caption;
                             }
@@ -398,7 +395,6 @@ public partial class PublisherViewModel : ViewModelBase {
         this.IsBusy = true;
         Boolean isAllDone = true;
         this.Clear();
-        //foreach (String uri in uriList) {
         for (Int32 i = 0; i < uriList.Length; i++) {
             var uri = uriList[i];
             try {
@@ -406,7 +402,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 this.Caption = uri.Trim();
                 this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Analyzing URL...";
                 await this.AnalysisUriToImagesAsync(this.Caption, token);
-                this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Sending to {platform.ToString()}...";
+                this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Sending to {platform}...";
                 if (this.Images.Count is 0) {
                     throw new InvalidOperationException("No images extracted from the URL.");
                 }
@@ -416,7 +412,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 if (platform.HasFlag(SocialPlatform.Telegram)) {
                     await this.SendImagesToTelegramAsync(token);
                 }
-                this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Successfully sent to {platform.ToString()}!";
+                this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Successfully sent to {platform}!";
             } catch (OperationCanceledException) {
                 this.StatusMessage = "Batch processing was cancelled by the user.";
                 isAllDone = false;

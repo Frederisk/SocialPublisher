@@ -24,7 +24,7 @@ namespace SocialPublisher.Services;
 
 public interface IUrlAnalysisImagesService {
     //public Task<List<Byte[]>> AnalysisImagesAsync(String uri, String token);
-    public IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storageBookmark, IProgress<String>? progress = null, CancellationToken token = default);
+    IAsyncEnumerable<Byte[]> AnalysisImagesAsync(String url, String storageBookmark, IProgress<String>? progress = null, CancellationToken token = default);
 }
 
 public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
@@ -50,14 +50,14 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                 yield break;
             }
             domain = "pixiv.net";
-            images = AnalysisPixivImagesAsync(id, progress, cancellationToken);
+            images = this.AnalysisPixivImagesAsync(id, progress, cancellationToken);
         } else if (url.Contains("twitter.com", StringComparison.OrdinalIgnoreCase) || url.Contains("x.com", StringComparison.OrdinalIgnoreCase)) {
             id = GetTwitterTweetId(url);
             if (String.IsNullOrEmpty(id)) {
                 yield break;
             }
             domain = "twitter.com";
-            images = AnalysisTwitterImagesAsync(id, progress, cancellationToken);
+            images = this.AnalysisTwitterImagesAsync(id, progress, cancellationToken);
         } else {
             throw new InvalidOperationException("Unsupported URL.");
         }
@@ -66,9 +66,9 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
         if (topLevel is not null && !String.IsNullOrEmpty(storageBookmark)) {
             var rootFolder = await topLevel.StorageProvider.OpenFolderBookmarkAsync(storageBookmark);
             if (rootFolder is not null) {
-                var domainFolder = await rootFolder.GetOrCreateFolderAsync(domain);
+                var domainFolder = await rootFolder.CreateFolderAsync(domain);
                 if (domainFolder is not null) {
-                    targetFolder = await domainFolder.GetOrCreateFolderAsync(id);
+                    targetFolder = await domainFolder.CreateFolderAsync(id);
                 }
             }
         }
@@ -79,13 +79,13 @@ public partial class UrlAnalysisImagesService : IUrlAnalysisImagesService {
                 continue;
             }
             if (targetFolder is not null) {
-                using MemoryStream stream = new MemoryStream(image);
+                using MemoryStream stream = new(image);
                 using SKCodec codec = SKCodec.Create(stream);
                 String extension = codec.EncodedFormat.ToString().ToLower();
                 String fileName = $"{index:00}.{extension}";
                 //String filePath = Path.Combine(targetDirectory, fileName);
                 try {
-                    var file = await targetFolder.GetOrCreateFileAsync(fileName);
+                    var file = await targetFolder.CreateFileAsync(fileName);
                     if (file is not null) {
                         await using var outStream = await file.OpenWriteAsync();
                         // Android doesn't support truncating files, so we don't set the length of the stream to 0 before writing.
