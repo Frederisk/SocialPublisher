@@ -1,15 +1,15 @@
-﻿using Avalonia.Controls;
+using System;
+using System.Threading.Tasks;
+
+using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
 using SocialPublisher.Utils;
 
-using System;
-using System.Threading.Tasks;
-
 namespace SocialPublisher.Services;
 
 public interface IIOPickerService {
-    public Task<String> PickFolderAsync(String oldBookmark);
+    Task<String> PickFolderAsync(String oldBookmark);
 }
 
 public class IOPickerService : IIOPickerService {

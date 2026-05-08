@@ -1,11 +1,11 @@
-﻿using SkiaSharp;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using SkiaSharp;
 
 namespace SocialPublisher.Utils;
 
@@ -26,7 +26,7 @@ public static class ImageHelper {
         using SKCanvas canvas = new(rotatedBitmap);
         canvas.Translate(rotatedBitmap.Width, 0);
         canvas.RotateDegrees(degrees);
-        using SKPaint paint = new SKPaint { };
+        using SKPaint paint = new();
         // SKImage.FromBitmap(originBitmap)
         canvas.DrawImage(originImage, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint);
         using SKImage rotatedImage = SKImage.FromBitmap(rotatedBitmap);
@@ -86,14 +86,14 @@ public static class ImageHelper {
                 Int32 minQ = 1;
                 Int32 maxQ = 100;
                 //Byte[]? bestBytes = null;
-                const Int32 maxConcurrency = 4;
+                const Int32 max_concurrency = 4;
 
                 while (minQ <= maxQ) {
                     token.ThrowIfCancellationRequested();
 
                     //Int32 midQ = minQ + (maxQ - minQ) / 2;
                     Int32 range = maxQ - minQ + 1;
-                    Int32 probeCount = Math.Min(range, maxConcurrency);
+                    Int32 probeCount = Math.Min(range, max_concurrency);
                     List<Int32> probes = new(probeCount);
 
                     if (probeCount is 1) {

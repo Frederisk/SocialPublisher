@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -21,8 +21,7 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     public Byte[] ImageBytes { get; private set; }
 
     [ObservableProperty]
-    private Bitmap? _displayImage;
-
+    public partial Bitmap? DisplayImage { get; set; }
     public AppSettings AppSettings { get; }
     private readonly Action<PostImageViewModel> _removeAction;
     private readonly Action<PostImageViewModel> _openAction;
@@ -67,7 +66,9 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
 
     private void UpdateDisplayImageAsync() {
         Task.Run(() => {
-            if (_disposed) return;
+            if (_disposed) {
+                return;
+            }
 
             Bitmap newBitmap;
             using (MemoryStream stream = new(this.ImageBytes)) {
@@ -89,7 +90,9 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     }
 
     protected virtual void Dispose(Boolean disposing) {
-        if (_disposed) return;
+        if (_disposed) {
+            return;
+        }
 
         if (disposing) {
             this.DisplayImage?.Dispose();
@@ -98,7 +101,7 @@ public partial class PostImageViewModel : ViewModelBase, IDisposable {
     }
 
     public void Dispose() {
-        Dispose(true);
+        this.Dispose(true);
         GC.SuppressFinalize(this);
     }
 }

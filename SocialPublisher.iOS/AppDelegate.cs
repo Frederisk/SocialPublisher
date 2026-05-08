@@ -1,9 +1,7 @@
-using Foundation;
-using UIKit;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.iOS;
-using Avalonia.Media;
+
+using Foundation;
 
 namespace SocialPublisher.iOS;
 
@@ -15,8 +13,7 @@ namespace SocialPublisher.iOS;
 public partial class AppDelegate : AvaloniaAppDelegate<App>
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
-    protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
-    {
+    protected override AppBuilder CustomizeAppBuilder(AppBuilder builder) {
         return base.CustomizeAppBuilder(builder)
             .WithInterFont();
     }

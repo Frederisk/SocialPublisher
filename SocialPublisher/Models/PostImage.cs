@@ -1,13 +1,13 @@
-﻿using Avalonia.Media.Imaging;
-
 using System;
 using System.IO;
+
+using Avalonia.Media.Imaging;
 
 namespace SocialPublisher.Models;
 
 public class PostImage : IDisposable {
     private Boolean _disposed = false;
-    
+
     public Bitmap DisplayImage { get; }
 
     public Byte[] ImageBytes { get; }
@@ -26,7 +26,9 @@ public class PostImage : IDisposable {
     }
 
     protected virtual void Dispose(Boolean disposing) {
-        if (_disposed) return;
+        if (_disposed) {
+            return;
+        }
 
         if (disposing) {
             // Dispose managed resources
@@ -37,7 +39,7 @@ public class PostImage : IDisposable {
     }
 
     public void Dispose() {
-        Dispose(true);
+        this.Dispose(true);
         GC.SuppressFinalize(this);
     }
 }

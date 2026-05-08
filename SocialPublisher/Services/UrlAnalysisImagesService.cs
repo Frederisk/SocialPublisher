@@ -1,13 +1,3 @@
-using Avalonia.Controls;
-using Avalonia.Platform.Storage;
-
-using PixivCS.Api;
-using PixivCS.Models.Illust;
-
-using SkiaSharp;
-
-using SocialPublisher.Utils;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,6 +9,16 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
+
+using PixivCS.Api;
+using PixivCS.Models.Illust;
+
+using SkiaSharp;
+
+using SocialPublisher.Utils;
 
 namespace SocialPublisher.Services;
 

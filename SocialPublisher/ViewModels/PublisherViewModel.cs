@@ -1,3 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 
@@ -11,16 +21,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 using SocialPublisher.Services;
 using SocialPublisher.Utils;
-
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Telegram.Bot;
 using Telegram.Bot.Types;

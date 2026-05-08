@@ -1,17 +1,15 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Input;
-using Avalonia.Input.Platform;
-using Avalonia.Media.Imaging;
-
-using SocialPublisher.Utils;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Media.Imaging;
+
+using SocialPublisher.Utils;
 
 namespace SocialPublisher.Services;
 

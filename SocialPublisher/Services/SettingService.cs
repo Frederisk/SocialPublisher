@@ -1,41 +1,43 @@
-﻿using Avalonia.Controls;
+using System;
+using System.IO;
+using System.Text.Json;
+
+using Avalonia.Controls;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using SocialPublisher.Utils;
 
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace SocialPublisher.Services;
 
 public partial class AppSettings : ObservableObject {
     [ObservableProperty]
-    private String _telegramToken = String.Empty;
+    public partial String TelegramToken { get; set; } = String.Empty;
     [ObservableProperty]
-    private String _telegramChatId = String.Empty;
+    public partial String TelegramChatId { get; set; } = String.Empty;
     [ObservableProperty]
-    private String _mastodonInstanceUrl = String.Empty;
+    public partial String MastodonInstanceUrl { get; set; } = String.Empty;
     [ObservableProperty]
-    private String _mastodonAccessToken = String.Empty;
+    public partial String MastodonAccessToken { get; set; } = String.Empty;
     [ObservableProperty]
-    private String _alterMastodonInstanceUrl = String.Empty;
+    public partial String AlterMastodonInstanceUrl { get; set; } = String.Empty;
     [ObservableProperty]
-    private String _alterMastodonAccessToken = String.Empty;
+    public partial String AlterMastodonAccessToken { get; set; } = String.Empty;
+
     [ObservableProperty]
-    private String _pixivRefreshToken = String.Empty;
+    public partial String PixivRefreshToken { get; set; } = String.Empty;
+
     [ObservableProperty]
-    //[NotifyPropertyChangedFor(nameof(ImageStoragePath))]
-    private String _imagesStorageBookmark = String.Empty;
+    public partial String ImagesStorageBookmark { get; set; } = String.Empty;
+
     //[property: JsonIgnore] No longer ignore the ImagesStoragePath. We need this stored value so that when the program starts and `TopLevel` is not available, the UI can obtain a value to display.
     [ObservableProperty]
-    private String _imagesStoragePath = String.Empty;
+    public partial String ImagesStoragePath { get; set; } = String.Empty;
+
     //[ObservableProperty]
     //private Boolean _enableBatchMode = false;
     [ObservableProperty]
-    private Boolean _isNsfwTime = false;
+    public partial Boolean IsNsfwTime { get; set; } = false;
 
     partial void OnImagesStorageBookmarkChanged(String value) {
         this.UpdateImagesStoragePathAsync(value);
@@ -60,11 +62,11 @@ public partial class AppSettings : ObservableObject {
 
 public interface ISettingService {
     AppSettings Settings { get; }
-    public void Save();
+    void Save();
 }
 
 public class SettingService : ISettingService {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions json_serializer_options = new() { WriteIndented = true };
     private readonly String _settingsFilePath;
 
     public AppSettings Settings { get; private set; }
@@ -87,7 +89,7 @@ public class SettingService : ISettingService {
     }
 
     public void Save() {
-        String json = JsonSerializer.Serialize(this.Settings, _jsonSerializerOptions);
+        String json = JsonSerializer.Serialize(this.Settings, json_serializer_options);
         File.WriteAllText(_settingsFilePath, json);
     }
 }
