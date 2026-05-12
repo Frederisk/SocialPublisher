@@ -389,17 +389,16 @@ public partial class PublisherViewModel : ViewModelBase {
     }
 
     public async Task StartBatchAsync(SocialPlatform platform) {
-        String[] uriList = this.BatchUri.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+        String[] uriList = this.BatchUri.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
         this.IsBusy = true;
         Boolean isAllDone = true;
         this.Clear();
         for (Int32 i = 0; i < uriList.Length; i++) {
-            var uri = uriList[i];
             try {
                 token.ThrowIfCancellationRequested();
-                this.Caption = uri.Trim();
+                this.Caption = uriList[i];
                 this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Analyzing URL...";
                 await this.AnalysisUriToImagesAsync(this.Caption, token);
                 this.StatusMessage = $"Batch processing ({i + 1}/{uriList.Length}): Sending to {platform}...";
@@ -427,7 +426,7 @@ public partial class PublisherViewModel : ViewModelBase {
             this.Clear();
         }
         if (isAllDone) {
-            this.StatusMessage = "All batch operations completed successfully.";
+            this.StatusMessage = $"All {platform} batch operations completed successfully.";
         }
         this.IsBusy = false;
         _cancellationTokenSource.Dispose();
@@ -453,7 +452,7 @@ public partial class PublisherViewModel : ViewModelBase {
                 if (attempts >= maxRetries) {
                     throw;
                 }
-                this.StatusMessage = $"Network issue, {ex.Message}. Retrying ({attempts}/{maxRetries}) in 5 seconds...";
+                this.StatusMessage = $"Network issue, {ex.Message} Retrying ({attempts}/{maxRetries}) in 5 seconds...";
                 await Task.Delay(TimeSpan.FromSeconds(5), token);
             }
         }

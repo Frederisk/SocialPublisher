@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -58,14 +58,14 @@ public class KeyboardAdaptiveBehavior : Behavior<Control> {
         if (this.AssociatedObject is null || !this.IsEnabled) {
             return;
         }
-        var height = args.NewState == InputPaneState.Open ? _inputPane?.OccludedRect.Height ?? 0 : 0;
+        var height = args.NewState is InputPaneState.Open ? _inputPane?.OccludedRect.Height ?? 0 : 0;
         this.AssociatedObject.Margin = new Thickness(
             this.AssociatedObject.Margin.Left,
             this.AssociatedObject.Margin.Top,
             this.AssociatedObject.Margin.Right,
             height);
 
-        if (args.NewState == InputPaneState.Open) {
+        if (args.NewState is InputPaneState.Open) {
             var focused = TopLevel.GetTopLevel(this.AssociatedObject)?.FocusManager?.GetFocusedElement() as Control;
             focused?.BringIntoView();
         }
